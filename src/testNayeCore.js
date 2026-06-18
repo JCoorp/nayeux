@@ -33,8 +33,8 @@ const tests = [
   }
 ];
 
-console.log("Naye Core — Prueba de ejecución simulada");
-console.log("----------------------------------------");
+console.log("Naye Core — Prueba con auditoría automática");
+console.log("-------------------------------------------");
 
 for (const test of tests) {
   const response = await processWithNaye(test);
@@ -47,4 +47,5 @@ for (const test of tests) {
   console.log("Sensibilidad:", response.decision.sensitivity);
   console.log("Proveedor recomendado:", response.decision.recommendedProvider);
   console.log("Resultado:", response.result.message);
+  console.log("Log:", response.audit.filePath);
 }

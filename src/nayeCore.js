@@ -1,6 +1,32 @@
 ﻿import { routeTask } from "./modelRouter.js";
 import { runLocalModel } from "./providers/localRunner.js";
 import { runOpenAIModel } from "./providers/openaiRunner.js";
+import { writeDecisionLog } from "./utils/auditLogger.js";
+
+async function finalizeProcess({
+  input,
+  route,
+  status,
+  result,
+  cloudEnabled,
+  jcPermissionForCloud
+}) {
+  const audit = writeDecisionLog({
+    input,
+    route,
+    status,
+    result,
+    cloudEnabled,
+    jcPermissionForCloud
+  });
+
+  return {
+    status,
+    decision: route,
+    result,
+    audit
+  };
+}
 
 async function processWithNaye({ input, jcPermissionForCloud = false, cloudEnabled = false }) {
   const route = routeTask({ input, jcPermissionForCloud });
@@ -12,22 +38,31 @@ async function processWithNaye({ input, jcPermissionForCloud = false, cloudEnabl
       sensitivity: route.sensitivity
     });
 
-    return {
+    return finalizeProcess({
+      input,
+      route,
       status: "protected_execution",
-      decision: route,
-      result: localResult
-    };
+      result: localResult,
+      cloudEnabled,
+      jcPermissionForCloud
+    });
   }
 
   if (route.requiresPermission && !jcPermissionForCloud) {
-    return {
-      status: "permission_required",
-      decision: route,
-      result: {
-        executed: false,
-        message: "La tarea requiere autorización de JC antes de usar un proveedor externo. Por seguridad, Naye recomienda local."
-      }
+    const result = {
+      provider: "none",
+      executed: false,
+      message: "La tarea requiere autorización de JC antes de usar un proveedor externo. Por seguridad, Naye recomienda local."
     };
+
+    return finalizeProcess({
+      input,
+      route,
+      status: "permission_required",
+      result,
+      cloudEnabled,
+      jcPermissionForCloud
+    });
   }
 
   if (route.recommendedProvider === "local") {
@@ -37,11 +72,14 @@ async function processWithNaye({ input, jcPermissionForCloud = false, cloudEnabl
       sensitivity: route.sensitivity
     });
 
-    return {
+    return finalizeProcess({
+      input,
+      route,
       status: "local_selected",
-      decision: route,
-      result: localResult
-    };
+      result: localResult,
+      cloudEnabled,
+      jcPermissionForCloud
+    });
   }
 
   if (route.recommendedProvider === "openai_or_local") {
@@ -52,11 +90,14 @@ async function processWithNaye({ input, jcPermissionForCloud = false, cloudEnabl
       cloudEnabled
     });
 
-    return {
+    return finalizeProcess({
+      input,
+      route,
       status: cloudEnabled ? "cloud_selected_dry_run" : "cloud_available_but_disabled",
-      decision: route,
-      result: openAIResult
-    };
+      result: openAIResult,
+      cloudEnabled,
+      jcPermissionForCloud
+    });
   }
 
   const fallbackResult = await runLocalModel({
@@ -65,11 +106,14 @@ async function processWithNaye({ input, jcPermissionForCloud = false, cloudEnabl
     sensitivity: route.sensitivity
   });
 
-  return {
+  return finalizeProcess({
+    input,
+    route,
     status: "fallback_local",
-    decision: route,
-    result: fallbackResult
-  };
+    result: fallbackResult,
+    cloudEnabled,
+    jcPermissionForCloud
+  });
 }
 
 export { processWithNaye };
