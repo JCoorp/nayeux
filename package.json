@@ -5,7 +5,8 @@
   "main": "src/testRouter.js",
   "type": "module",
   "scripts": {
-    "test-router": "node src/testRouter.js"
+    "test-router": "node src/testRouter.js",
+    "test-core": "node src/testNayeCore.js"
   },
   "author": "JC",
   "license": "PRIVATE"
