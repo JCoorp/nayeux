@@ -1,6 +1,35 @@
-﻿{
+{
   "registry_name": "Naye Tool Registry",
   "version": "0.1.0",
   "authorization_role": "Usuario Administrador designado",
-  "tools": []
+  "tools": [
+    {
+      "name": "systemStatus",
+      "displayName": "System Status Tool",
+      "status": "approved",
+      "packageName": "systemStatus_2026-06-18T21-31-51-746Z",
+      "packageDir": "F:\\NayeVault\\naye-core\\generated-tools\\approved\\systemStatus_2026-06-18T21-31-51-746Z",
+      "riskLevel": "low",
+      "recommendedLanguage": "PowerShell",
+      "integrationLanguage": "JavaScript",
+      "permissions": {
+        "readOnly": true,
+        "canModifyFiles": false,
+        "canDeleteFiles": false,
+        "canRunAdminCommands": false,
+        "usesNetwork": false,
+        "usesExternalProvider": false,
+        "allowedScope": "Metadatos básicos del sistema local."
+      },
+      "requiresConfirmation": false,
+      "usesNetwork": false,
+      "usesExternalProvider": false,
+      "approvedAt": "2026-06-18T21:42:07.539Z",
+      "authorizedByRole": "Usuario Administrador designado",
+      "dryRunPassed": true,
+      "dryRunSummary": "dry_run test passed",
+      "activationStatus": "approved_not_active",
+      "notes": "Aprobada como herramienta de bajo riesgo en modo solo lectura. No está activa todavía."
+    }
+  ]
 }
