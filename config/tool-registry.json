@@ -6,7 +6,7 @@
     {
       "name": "systemStatus",
       "displayName": "System Status Tool",
-      "status": "approved",
+      "status": "active",
       "packageName": "systemStatus_2026-06-18T21-31-51-746Z",
       "packageDir": "F:\\NayeVault\\naye-core\\generated-tools\\approved\\systemStatus_2026-06-18T21-31-51-746Z",
       "riskLevel": "low",
@@ -28,8 +28,11 @@
       "authorizedByRole": "Usuario Administrador designado",
       "dryRunPassed": true,
       "dryRunSummary": "dry_run test passed",
-      "activationStatus": "approved_not_active",
-      "notes": "Aprobada como herramienta de bajo riesgo en modo solo lectura. No está activa todavía."
+      "activationStatus": "active",
+      "notes": "Herramienta activa de bajo riesgo, solo lectura, sin red y sin proveedor externo.",
+      "activePackageDir": "F:\\NayeVault\\naye-core\\generated-tools\\active\\systemStatus_2026-06-18T21-31-51-746Z",
+      "activatedAt": "2026-06-18T22:24:12.842Z",
+      "activatedByRole": "Usuario Administrador designado"
     }
   ]
 }

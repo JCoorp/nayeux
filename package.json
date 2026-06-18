@@ -8,7 +8,8 @@
     "test-router": "node src/testRouter.js",
     "test-core": "node src/testNayeCore.js",
     "ask": "node src/cli.js",
-    "approve-tool": "node src/toolApprover.js"
+    "approve-tool": "node src/toolApprover.js",
+    "activate-tool": "node src/toolActivator.js"
   },
   "author": "JC",
   "license": "PRIVATE"

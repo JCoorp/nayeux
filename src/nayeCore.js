@@ -3,6 +3,7 @@ import { runLocalModel } from "./providers/localRunner.js";
 import { runOpenAIModel } from "./providers/openaiRunner.js";
 import { writeDecisionLog } from "./utils/auditLogger.js";
 import { createToolPackageIfNeeded } from "./toolFactory.js";
+import { runActiveToolIfAvailable } from "./toolRunner.js";
 
 async function finalizeProcess({
   input,
@@ -44,6 +45,19 @@ async function processWithNaye({ input, jcPermissionForCloud = false, cloudEnabl
       route,
       status: "protected_execution",
       result: localResult,
+      cloudEnabled,
+      jcPermissionForCloud
+    });
+  }
+
+  const activeToolResult = await runActiveToolIfAvailable({ input, route });
+
+  if (activeToolResult.toolExecuted) {
+    return finalizeProcess({
+      input,
+      route,
+      status: "active_tool_executed",
+      result: activeToolResult,
       cloudEnabled,
       jcPermissionForCloud
     });
