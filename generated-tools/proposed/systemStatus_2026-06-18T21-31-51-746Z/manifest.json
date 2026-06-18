@@ -1,0 +1,69 @@
+{
+  "system": "Naye Core",
+  "component": "Naye Tool Factory",
+  "packageType": "tool_package",
+  "status": "proposed",
+  "createdAt": "2026-06-18T21:31:51.761Z",
+  "authorizationRole": "Usuario Administrador designado",
+  "sourceRequest": {
+    "inputPreview": "estus de la pc",
+    "taskType": "multi_device",
+    "sensitivity": "internal"
+  },
+  "tool": {
+    "name": "systemStatus",
+    "displayName": "System Status Tool",
+    "purpose": "Leer el estado básico de la PC local en modo solo lectura.",
+    "riskLevel": "low",
+    "recommendedLanguage": "PowerShell",
+    "integrationLanguage": "JavaScript",
+    "languageReason": "PowerShell es la mejor opción para consultar información local de Windows; JavaScript sirve como puente con Naye Core.",
+    "alternativeLanguages": [
+      {
+        "language": "JavaScript",
+        "useCase": "Integración directa con Naye Core, pero con menos acceso nativo a diagnósticos de Windows."
+      },
+      {
+        "language": "Python",
+        "useCase": "Útil para análisis posterior, pero no necesario para diagnóstico básico de Windows."
+      }
+    ],
+    "permissions": {
+      "readOnly": true,
+      "canModifyFiles": false,
+      "canDeleteFiles": false,
+      "canRunAdminCommands": false,
+      "usesNetwork": false,
+      "usesExternalProvider": false,
+      "allowedScope": "Metadatos básicos del sistema local."
+    },
+    "prohibitedActions": [
+      "Borrar archivos.",
+      "Modificar archivos.",
+      "Leer contraseñas.",
+      "Leer tokens.",
+      "Cambiar permisos.",
+      "Ejecutar comandos administrativos.",
+      "Enviar datos a internet.",
+      "Acceder a rutas no autorizadas."
+    ],
+    "dryRunRequired": true,
+    "adminReviewRequired": true,
+    "activationStatus": "pending_review"
+  },
+  "files": {
+    "manifest": "manifest.json",
+    "readme": "README.md",
+    "security": "SECURITY.md",
+    "implementation": "src/systemStatus.ps1",
+    "test": "tests/test-systemStatus.ps1",
+    "bridge": "bridge/systemStatusBridge.js"
+  },
+  "nextSteps": [
+    "Revisar el paquete generado.",
+    "Ejecutar prueba dry_run.",
+    "Validar que no modifica archivos ni usa red.",
+    "Registrar en Tool Registry si se aprueba.",
+    "Activar solo después de aprobación del Usuario Administrador designado."
+  ]
+}

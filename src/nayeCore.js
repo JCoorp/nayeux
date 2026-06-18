@@ -2,6 +2,7 @@
 import { runLocalModel } from "./providers/localRunner.js";
 import { runOpenAIModel } from "./providers/openaiRunner.js";
 import { writeDecisionLog } from "./utils/auditLogger.js";
+import { createToolPackageIfNeeded } from "./toolFactory.js";
 
 async function finalizeProcess({
   input,
@@ -48,11 +49,31 @@ async function processWithNaye({ input, jcPermissionForCloud = false, cloudEnabl
     });
   }
 
+  const toolPackage = createToolPackageIfNeeded({ input, route });
+
+  if (toolPackage.packageCreated) {
+    const result = {
+      provider: "tool_factory",
+      executed: false,
+      message: toolPackage.message,
+      data: toolPackage
+    };
+
+    return finalizeProcess({
+      input,
+      route,
+      status: "tool_package_created",
+      result,
+      cloudEnabled,
+      jcPermissionForCloud
+    });
+  }
+
   if (route.requiresPermission && !jcPermissionForCloud) {
     const result = {
       provider: "none",
       executed: false,
-      message: "La tarea requiere autorización de JC antes de usar un proveedor externo. Por seguridad, Naye recomienda local."
+      message: "La tarea requiere autorización del Usuario Administrador designado antes de usar un proveedor externo. Por seguridad, Naye recomienda local."
     };
 
     return finalizeProcess({

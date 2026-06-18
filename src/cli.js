@@ -11,6 +11,7 @@ function printHelp() {
   console.log("");
   console.log("Ejemplos:");
   console.log('  npm run ask -- "Hazme un reporte general sobre IA"');
+  console.log('  npm run ask -- "estatus de la pc"');
   console.log('  npm run ask -- --cloud "Hazme un reporte público sobre IA"');
   console.log('  npm run ask -- --cloud --allow-sensitive-cloud "Revisa este contrato de empresa"');
   console.log("");
@@ -51,6 +52,16 @@ function safePreview(input, sensitivity) {
   return input;
 }
 
+function printData(data) {
+  if (!data) {
+    return;
+  }
+
+  console.log("");
+  console.log("Datos adicionales:");
+  console.log(JSON.stringify(data, null, 2));
+}
+
 const { input, cloudEnabled, jcPermissionForCloud } = getArgs();
 
 if (!input) {
@@ -78,5 +89,8 @@ console.log("Requiere permiso:", response.decision.requiresPermission);
 console.log("Bloquea externo:", response.decision.blockedExternal);
 console.log("Motivo:", response.decision.reason);
 console.log("Resultado:", response.result.message);
+
+printData(response.result.data);
+
 console.log("Log:", response.audit.filePath);
 console.log("");
