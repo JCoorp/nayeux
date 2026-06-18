@@ -1,0 +1,31 @@
+﻿{
+  "strategy": "local_first_cloud_when_useful_permission_when_sensitive",
+  "default_mode": "dry_run",
+  "providers": {
+    "local": {
+      "enabled": false,
+      "name": "local_model",
+      "runtime": "pending",
+      "notes": "Pendiente: Ollama, LM Studio, llama.cpp u otro motor local."
+    },
+    "openai": {
+      "enabled": false,
+      "name": "openai",
+      "api_key_configured": false,
+      "notes": "Pendiente: configurar API solo si JC lo autoriza."
+    }
+  },
+  "sensitivity_levels": [
+    "public",
+    "internal",
+    "private",
+    "confidential",
+    "critical"
+  ],
+  "rules": {
+    "critical_never_external": true,
+    "confidential_requires_permission_for_cloud": true,
+    "private_prefers_local": true,
+    "public_can_use_cloud": true
+  }
+}
