@@ -1,0 +1,35 @@
+﻿# Dependencies
+node_modules/
+
+# Environment variables and secrets
+.env
+.env.*
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cert
+
+# API keys or credentials
+credentials/
+secrets/
+tokens/
+
+# Runtime logs
+logs/runtime/
+logs/access/
+logs/errors/
+
+# Temporary files
+tmp/
+temp/
+.cache/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
