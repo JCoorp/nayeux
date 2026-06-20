@@ -22,7 +22,8 @@
     "openclaw-propose": "node src/openclawPropose.js",
     "openclaw-proposals-status": "node src/openclawProposalsStatus.js",
     "openclaw-approve": "node src/openclawApprove.js",
-    "openclaw-reject": "node src/openclawReject.js"
+    "openclaw-reject": "node src/openclawReject.js",
+    "openclaw-execution-plan": "node src/openclawExecutionPlan.js"
   },
   "author": "JC",
   "license": "PRIVATE"
