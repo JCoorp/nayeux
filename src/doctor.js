@@ -1,5 +1,6 @@
 ﻿import fs from "fs";
 import path from "path";
+import { spawnSync } from "child_process";
 
 const ROOT = path.resolve("F:/NayeVault/naye-core");
 const PACKAGE_PATH = path.join(ROOT, "package.json");
@@ -189,6 +190,33 @@ function checkKnowledge() {
   };
 }
 
+
+function checkOpenClaw() {
+  const scriptPath = path.join(ROOT, "src", "openclawStatus.js");
+
+  if (!fs.existsSync(scriptPath)) {
+    return {
+      label: "OpenClaw Fresh",
+      ok: false,
+      message: "No existe src/openclawStatus.js"
+    };
+  }
+
+  const result = spawnSync(process.execPath, [scriptPath], {
+    cwd: ROOT,
+    encoding: "utf8"
+  });
+
+  return {
+    label: "OpenClaw Fresh",
+    ok: result.status === 0,
+    message: result.status === 0
+      ? "OpenClaw Fresh y agentes validados"
+      : "OpenClaw requiere revisión",
+    openclawStatusCode: result.status,
+    error: result.error?.message ?? null
+  };
+}
 function printCheck(check) {
   const icon = check.ok ? "OK" : "ERROR";
   console.log(`[${icon}] ${check.label}: ${check.message}`);
@@ -267,6 +295,7 @@ async function main() {
 
   checks.push(checkToolRegistry());
   checks.push(checkKnowledge());
+  checks.push(checkOpenClaw());
 
   console.log("");
 
@@ -277,6 +306,7 @@ async function main() {
   const ollamaCheck = checks.find(check => check.label === "Ollama API");
   const toolCheck = checks.find(check => check.label === "Tool Registry");
   const knowledgeCheck = checks.find(check => check.label === "Knowledge Memory");
+  const openclawCheck = checks.find(check => check.label === "OpenClaw Fresh");
 
   const systemBaseOk = baseChecks.every(check => check.ok);
   const modelOk = ollamaCheck ? ollamaCheck.ok && ollamaCheck.modelFound : false;
@@ -286,6 +316,7 @@ async function main() {
     ? knowledgeCheck.approvalLogExists && knowledgeCheck.activeApprovalCount > 0
     : false;
   const archiveOk = knowledgeCheck ? knowledgeCheck.archiveOk : false;
+  const openclawOk = openclawCheck ? openclawCheck.ok : false;
 
   console.log("");
   console.log("Resumen");
@@ -296,9 +327,10 @@ async function main() {
   console.log("Memoria documental:", knowledgeOk ? "OK" : "REVISAR");
   console.log("Aprobaciones documentales:", approvalsOk ? "OK" : "REVISAR");
   console.log("Archivado documental:", archiveOk ? "OK" : "REVISAR");
+  console.log("OpenClaw Fresh:", openclawOk ? "OK" : "REVISAR");
   console.log("");
 
-  if (!systemBaseOk || !modelOk || !toolsOk || !knowledgeOk || !approvalsOk || !archiveOk) {
+  if (!systemBaseOk || !modelOk || !toolsOk || !knowledgeOk || !approvalsOk || !archiveOk || !openclawOk) {
     process.exit(1);
   }
 }
@@ -311,3 +343,4 @@ main().catch(error => {
   console.error("");
   process.exit(1);
 });
+
