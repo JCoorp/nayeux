@@ -1,0 +1,26 @@
+﻿{
+  "system": "Naye Core",
+  "component": "OpenClaw Bridge",
+  "version": "0.1.0",
+  "enabled": false,
+  "mode": "fresh_only",
+  "openclawFreshRoot": "F:/NayeVault/openclaw/fresh",
+  "openclawFreshConfig": "F:/NayeVault/openclaw/fresh/config/openclaw.fresh.config.json",
+  "securityPolicy": "F:/NayeVault/openclaw/fresh/SECURITY_POLICY.md",
+  "rules": {
+    "restoreOldBackup": false,
+    "readOldBackup": false,
+    "migrateCredentials": false,
+    "migrateSessions": false,
+    "migrateCookies": false,
+    "migrateTokens": false,
+    "allowNetworkByDefault": false,
+    "allowExternalProviderByDefault": false,
+    "requireApprovalForSensitiveActions": true
+  },
+  "status": {
+    "bridgePrepared": true,
+    "operationalConnection": false,
+    "reason": "El puente está documentado y preparado, pero no se permite ejecutar OpenClaw todavía."
+  }
+}
