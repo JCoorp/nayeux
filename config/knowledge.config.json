@@ -1,0 +1,13 @@
+﻿{
+  "enabled": true,
+  "knowledgeRoot": "F:/NayeVault/knowledge",
+  "approvedDir": "F:/NayeVault/knowledge/approved",
+  "indexDir": "F:/NayeVault/knowledge/index",
+  "indexFile": "F:/NayeVault/knowledge/index/knowledge-index.json",
+  "allowedExtensions": [".md", ".txt", ".json"],
+  "maxFileSizeKB": 512,
+  "readOnly": true,
+  "allowNetwork": false,
+  "allowExternalProvider": false,
+  "notes": "Naye solo debe indexar documentos aprobados dentro de knowledge/approved."
+}

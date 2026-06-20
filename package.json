@@ -10,7 +10,8 @@
     "ask": "node src/cli.js",
     "approve-tool": "node src/toolApprover.js",
     "activate-tool": "node src/toolActivator.js",
-    "doctor": "node src/doctor.js"
+    "doctor": "node src/doctor.js",
+    "index-knowledge": "node src/knowledgeIndexer.js"
   },
   "author": "JC",
   "license": "PRIVATE"
