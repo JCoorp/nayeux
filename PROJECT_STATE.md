@@ -127,3 +127,29 @@ npm run doctor
 Último commit relevante:
 
 645ee81 Add knowledge archive command
+
+---
+
+## Actualización: Doctor archive awareness
+
+Se actualizó Naye Doctor para distinguir correctamente entre:
+
+- Documentos indexados activos.
+- Aprobaciones formales activas.
+- Documentos archivados formalmente.
+- Archivos presentes en archive.
+
+Ahora Doctor muestra:
+
+- Aprobaciones formales activas.
+- Aprobados activos.
+- Archivados formalmente.
+- Documentos archivados.
+- Archivos en archive.
+- Archivado documental: OK.
+
+Esto alinea Doctor con knowledge-status y evita que documentos archivados se cuenten como conocimiento activo.
+
+Último commit relevante:
+
+d21d441 Update Doctor archive awareness
