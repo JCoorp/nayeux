@@ -93,3 +93,37 @@ Crear un comando formal:
 npm run archive-knowledge -- "archivo.md"
 
 para archivar documentos aprobados sin romper el registro de aprobaciones.
+
+---
+
+## Actualización: Knowledge Archiver
+
+Se agregó el comando formal para archivar documentos de conocimiento aprobados.
+
+Comando:
+
+npm run archive-knowledge -- "archivo.md"
+
+Función:
+
+- Mueve documentos desde F:\NayeVault\knowledge\approved hacia F:\NayeVault\knowledge\archive.
+- Cambia el estado del documento en knowledge-approvals.json a archived.
+- Evita que documentos archivados sigan apareciendo como conocimiento activo.
+- Permite conservar historial sin contaminar la memoria documental activa.
+
+Flujo actualizado de memoria:
+
+inbox -> approve-knowledge -> approved -> index-knowledge -> respuesta con memoria
+approved -> archive-knowledge -> archive -> index-knowledge
+
+Comandos de mantenimiento actuales:
+
+npm run approve-knowledge -- "archivo.md"
+npm run archive-knowledge -- "archivo.md"
+npm run index-knowledge
+npm run knowledge-status
+npm run doctor
+
+Último commit relevante:
+
+645ee81 Add knowledge archive command
