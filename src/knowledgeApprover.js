@@ -111,7 +111,7 @@ function approveKnowledgeFile(fileName) {
 
   const sha256 = hashFile(sourcePath);
 
-  fs.copyFileSync(sourcePath, destinationPath);
+  fs.renameSync(sourcePath, destinationPath);
 
   const approvalLog = loadApprovalLog(approvalLogPath);
 
@@ -125,6 +125,7 @@ function approveKnowledgeFile(fileName) {
     approvedAt: new Date().toISOString(),
     approvedByRole: "Usuario Administrador designado",
     status: "approved",
+    action: "moved_from_inbox_to_approved",
     readOnly: true,
     allowNetwork: false,
     allowExternalProvider: false
@@ -144,6 +145,7 @@ try {
   console.log("Naye Knowledge Approver");
   console.log("-----------------------");
   console.log("Archivo aprobado:", result.fileName);
+  console.log("Acción:", result.action);
   console.log("Destino:", result.destinationPath);
   console.log("SHA256:", result.sha256);
   console.log("Estado:", result.status);
