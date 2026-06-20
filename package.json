@@ -11,7 +11,8 @@
     "approve-tool": "node src/toolApprover.js",
     "activate-tool": "node src/toolActivator.js",
     "doctor": "node src/doctor.js",
-    "index-knowledge": "node src/knowledgeIndexer.js"
+    "index-knowledge": "node src/knowledgeIndexer.js",
+    "approve-knowledge": "node src/knowledgeApprover.js"
   },
   "author": "JC",
   "license": "PRIVATE"
