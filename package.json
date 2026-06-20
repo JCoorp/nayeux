@@ -14,7 +14,8 @@
     "index-knowledge": "node src/knowledgeIndexer.js",
     "approve-knowledge": "node src/knowledgeApprover.js",
     "knowledge-status": "node src/knowledgeStatus.js",
-    "archive-knowledge": "node src/archiveKnowledge.js"
+    "archive-knowledge": "node src/archiveKnowledge.js",
+    "openclaw-inventory": "node src/openclawInventory.js"
   },
   "author": "JC",
   "license": "PRIVATE"
