@@ -153,3 +153,30 @@ Esto alinea Doctor con knowledge-status y evita que documentos archivados se cue
 Último commit relevante:
 
 d21d441 Update Doctor archive awareness
+
+---
+
+## Decisión: OpenClaw desde cero
+
+Se decidió no restaurar el backup antiguo de OpenClaw.
+
+Motivo:
+
+- Evitar credenciales antiguas.
+- Evitar sesiones, cookies o tokens.
+- Evitar configuraciones heredadas inseguras.
+- Mantener Naye Core limpio y controlado.
+
+Nueva estrategia:
+
+- Crear OpenClaw desde cero.
+- Usar F:\NayeVault\openclaw\fresh como espacio limpio.
+- Conectar OpenClaw después mediante un puente controlado desde Naye Core.
+
+Ruta base:
+
+F:\NayeVault\openclaw\fresh
+
+Regla:
+
+Naye Core sigue siendo el núcleo. OpenClaw será una capa operativa/agente, no un reemplazo.
