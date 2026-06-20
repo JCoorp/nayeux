@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "naye-core",
   "version": "0.1.0",
   "description": "Naye Core - Model Router inicial para arquitectura híbrida local/cloud.",
@@ -13,7 +13,8 @@
     "doctor": "node src/doctor.js",
     "index-knowledge": "node src/knowledgeIndexer.js",
     "approve-knowledge": "node src/knowledgeApprover.js",
-    "knowledge-status": "node src/knowledgeStatus.js"
+    "knowledge-status": "node src/knowledgeStatus.js",
+    "archive-knowledge": "node src/archiveKnowledge.js"
   },
   "author": "JC",
   "license": "PRIVATE"
