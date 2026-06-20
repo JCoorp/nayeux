@@ -1,0 +1,14 @@
+﻿{
+  "provider": "ollama",
+  "enabled": true,
+  "url": "http://127.0.0.1:11434/api/generate",
+  "model": "llama3.2:3b",
+  "temperature": 0.2,
+  "rules": {
+    "localFirst": true,
+    "allowInternet": false,
+    "allowFileAccessByDefault": false,
+    "language": "es"
+  },
+  "notes": "Configuración del modelo local principal de Naye. Cambiar model permite probar otros modelos sin modificar código."
+}
