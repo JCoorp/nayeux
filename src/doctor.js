@@ -8,19 +8,20 @@ const TOOL_REGISTRY_PATH = path.join(ROOT, "config", "tool-registry.json");
 const KNOWLEDGE_CONFIG_PATH = path.join(ROOT, "config", "knowledge.config.json");
 
 function readJson(filePath) {
-  const raw = fs.readFileSync(filePath, "utf8").replace(/^\uFEFF/, "");
-  return JSON.parse(raw);
+  return JSON.parse(fs.readFileSync(filePath, "utf8").replace(/^\uFEFF/, ""));
+}
+
+function listFiles(dirPath) {
+  if (!fs.existsSync(dirPath)) return [];
+  return fs.readdirSync(dirPath, { withFileTypes: true })
+    .filter(item => item.isFile())
+    .map(item => item.name)
+    .sort();
 }
 
 function checkFile(filePath, label) {
-  const exists = fs.existsSync(filePath);
-
-  return {
-    label,
-    ok: exists,
-    path: filePath,
-    message: exists ? "Existe" : "No existe"
-  };
+  const ok = fs.existsSync(filePath);
+  return { label, ok, message: ok ? "Existe" : "No existe" };
 }
 
 async function checkOllama(config) {
@@ -34,30 +35,27 @@ async function checkOllama(config) {
       return {
         label: "Ollama API",
         ok: false,
-        url: tagsUrl,
         message: `Ollama respondió con estado HTTP ${response.status}`
       };
     }
 
     const data = await response.json();
     const models = Array.isArray(data.models) ? data.models : [];
-    const configuredModel = config.model;
-    const modelFound = models.some(model => model.name === configuredModel);
+    const installedModels = models.map(model => model.name);
+    const modelFound = installedModels.includes(config.model);
 
     return {
       label: "Ollama API",
       ok: true,
-      url: tagsUrl,
       message: "Ollama está respondiendo",
-      configuredModel,
+      configuredModel: config.model,
       modelFound,
-      installedModels: models.map(model => model.name)
+      installedModels
     };
   } catch (error) {
     return {
       label: "Ollama API",
       ok: false,
-      url: tagsUrl,
       message: "No se pudo conectar con Ollama",
       error: error.message
     };
@@ -69,25 +67,25 @@ function checkToolRegistry() {
     return {
       label: "Tool Registry",
       ok: false,
-      path: TOOL_REGISTRY_PATH,
       message: "No existe tool-registry.json"
     };
   }
 
   const registry = readJson(TOOL_REGISTRY_PATH);
   const tools = Array.isArray(registry.tools) ? registry.tools : [];
+  const activeTools = tools
+    .filter(tool => tool.status === "active" && tool.activationStatus === "active")
+    .map(tool => tool.name);
+
   const systemStatus = tools.find(tool => tool.name === "systemStatus");
 
   return {
     label: "Tool Registry",
     ok: Boolean(systemStatus && systemStatus.status === "active" && systemStatus.activationStatus === "active"),
-    path: TOOL_REGISTRY_PATH,
     message: systemStatus
       ? `systemStatus encontrado con status=${systemStatus.status}, activationStatus=${systemStatus.activationStatus}`
       : "systemStatus no está registrado",
-    activeTools: tools
-      .filter(tool => tool.status === "active" && tool.activationStatus === "active")
-      .map(tool => tool.name)
+    activeTools
   };
 }
 
@@ -96,7 +94,7 @@ function checkKnowledge() {
     return {
       label: "Knowledge Memory",
       ok: false,
-      path: KNOWLEDGE_CONFIG_PATH,
+      archiveOk: false,
       message: "No existe knowledge.config.json"
     };
   }
@@ -107,35 +105,32 @@ function checkKnowledge() {
     return {
       label: "Knowledge Memory",
       ok: false,
-      path: KNOWLEDGE_CONFIG_PATH,
+      archiveOk: false,
       message: "La memoria documental está deshabilitada"
     };
   }
 
+  const knowledgeRoot = path.resolve(config.knowledgeRoot);
   const approvedDir = path.resolve(config.approvedDir);
+  const archiveDir = path.join(knowledgeRoot, "archive");
   const indexFile = path.resolve(config.indexFile);
   const approvalLogPath = path.join(path.resolve(config.indexDir), "knowledge-approvals.json");
-
-  if (!fs.existsSync(approvedDir)) {
-    return {
-      label: "Knowledge Memory",
-      ok: false,
-      path: approvedDir,
-      message: "No existe la carpeta de documentos aprobados"
-    };
-  }
 
   if (!fs.existsSync(indexFile)) {
     return {
       label: "Knowledge Memory",
       ok: false,
-      path: indexFile,
+      archiveOk: false,
       message: "No existe knowledge-index.json. Ejecuta npm run index-knowledge"
     };
   }
 
+  const approvedFiles = listFiles(approvedDir);
+  const archiveFiles = listFiles(archiveDir);
+
   const index = readJson(indexFile);
   const documents = Array.isArray(index.documents) ? index.documents : [];
+  const indexedDocuments = documents.map(doc => doc.relativePath ?? doc.title).sort();
 
   let approvals = [];
   let approvalLogExists = false;
@@ -146,27 +141,56 @@ function checkKnowledge() {
     approvals = Array.isArray(approvalLog.approvals) ? approvalLog.approvals : [];
   }
 
+  const activeApprovals = approvals.filter(item => item.status !== "archived");
+  const archivedApprovals = approvals.filter(item => item.status === "archived");
+
+  const activeApprovedDocuments = activeApprovals.map(item => item.fileName).sort();
+  const archivedDocuments = archivedApprovals.map(item => item.fileName).sort();
+
+  const approvedSet = new Set(approvedFiles);
+  const indexSet = new Set(indexedDocuments);
+  const archiveSet = new Set(archiveFiles);
+
+  const approvedButNotIndexed = approvedFiles.filter(file => !indexSet.has(file));
+  const indexedButNotApproved = indexedDocuments.filter(file => !approvedSet.has(file));
+  const activeApprovalMissingApprovedFile = activeApprovedDocuments.filter(file => !approvedSet.has(file));
+  const archivedMissingArchiveFile = archivedDocuments.filter(file => !archiveSet.has(file));
+  const archivedStillApproved = archivedDocuments.filter(file => approvedSet.has(file));
+
+  const knowledgeOk =
+    documents.length > 0 &&
+    approvedButNotIndexed.length === 0 &&
+    indexedButNotApproved.length === 0 &&
+    activeApprovalMissingApprovedFile.length === 0;
+
+  const archiveOk =
+    archivedMissingArchiveFile.length === 0 &&
+    archivedStillApproved.length === 0;
+
   return {
     label: "Knowledge Memory",
-    ok: documents.length > 0,
-    path: indexFile,
-    message: documents.length > 0
-      ? `Memoria documental activa con ${documents.length} documento(s) indexado(s)`
-      : "La memoria existe, pero no tiene documentos indexados",
-    approvedDir,
-    approvalLogPath,
-    approvalLogExists,
-    approvalCount: approvals.length,
-    indexedAt: index.indexedAt,
+    ok: knowledgeOk,
+    archiveOk,
+    message: `Memoria documental activa con ${documents.length} documento(s) indexado(s)`,
     documentCount: documents.length,
-    documents: documents.map(doc => doc.title),
-    approvedDocuments: approvals.map(item => item.fileName)
+    indexedDocuments,
+    approvalLogExists,
+    activeApprovalCount: activeApprovals.length,
+    activeApprovedDocuments,
+    archivedApprovalCount: archivedApprovals.length,
+    archivedDocuments,
+    archiveFiles,
+    approvedButNotIndexed,
+    indexedButNotApproved,
+    activeApprovalMissingApprovedFile,
+    archivedMissingArchiveFile,
+    archivedStillApproved,
+    indexedAt: index.indexedAt
   };
 }
 
 function printCheck(check) {
   const icon = check.ok ? "OK" : "ERROR";
-
   console.log(`[${icon}] ${check.label}: ${check.message}`);
 
   if (check.configuredModel) {
@@ -183,23 +207,35 @@ function printCheck(check) {
   }
 
   if (check.documentCount !== undefined) {
-    console.log(`     Documentos indexados: ${check.documentCount}`);
+    console.log(`     Documentos indexados activos: ${check.documentCount}`);
   }
 
-  if (check.documents?.length) {
-    console.log(`     Documentos indexados: ${check.documents.join(", ")}`);
+  if (check.indexedDocuments?.length) {
+    console.log(`     Indexados activos: ${check.indexedDocuments.join(", ")}`);
   }
 
   if (check.approvalLogExists !== undefined) {
     console.log(`     Registro de aprobaciones: ${check.approvalLogExists ? "Existe" : "No existe"}`);
   }
 
-  if (check.approvalCount !== undefined) {
-    console.log(`     Documentos aprobados formalmente: ${check.approvalCount}`);
+  if (check.activeApprovalCount !== undefined) {
+    console.log(`     Aprobaciones formales activas: ${check.activeApprovalCount}`);
   }
 
-  if (check.approvedDocuments?.length) {
-    console.log(`     Aprobados: ${check.approvedDocuments.join(", ")}`);
+  if (check.activeApprovedDocuments?.length) {
+    console.log(`     Aprobados activos: ${check.activeApprovedDocuments.join(", ")}`);
+  }
+
+  if (check.archivedApprovalCount !== undefined) {
+    console.log(`     Archivados formalmente: ${check.archivedApprovalCount}`);
+  }
+
+  if (check.archivedDocuments?.length) {
+    console.log(`     Documentos archivados: ${check.archivedDocuments.join(", ")}`);
+  }
+
+  if (check.archiveFiles?.length) {
+    console.log(`     Archivos en archive: ${check.archiveFiles.join(", ")}`);
   }
 
   if (check.indexedAt) {
@@ -216,16 +252,17 @@ async function main() {
   console.log("Naye Doctor");
   console.log("-----------");
 
-  const checks = [];
+  const baseChecks = [
+    checkFile(PACKAGE_PATH, "package.json"),
+    checkFile(LOCAL_MODEL_CONFIG_PATH, "local-model.config.json"),
+    checkFile(TOOL_REGISTRY_PATH, "tool-registry.json"),
+    checkFile(KNOWLEDGE_CONFIG_PATH, "knowledge.config.json")
+  ];
 
-  checks.push(checkFile(PACKAGE_PATH, "package.json"));
-  checks.push(checkFile(LOCAL_MODEL_CONFIG_PATH, "local-model.config.json"));
-  checks.push(checkFile(TOOL_REGISTRY_PATH, "tool-registry.json"));
-  checks.push(checkFile(KNOWLEDGE_CONFIG_PATH, "knowledge.config.json"));
+  const checks = [...baseChecks];
 
   if (fs.existsSync(LOCAL_MODEL_CONFIG_PATH)) {
-    const localModelConfig = readJson(LOCAL_MODEL_CONFIG_PATH);
-    checks.push(await checkOllama(localModelConfig));
+    checks.push(await checkOllama(readJson(LOCAL_MODEL_CONFIG_PATH)));
   }
 
   checks.push(checkToolRegistry());
@@ -241,13 +278,14 @@ async function main() {
   const toolCheck = checks.find(check => check.label === "Tool Registry");
   const knowledgeCheck = checks.find(check => check.label === "Knowledge Memory");
 
-  const systemBaseOk = checks.every(check => check.ok);
+  const systemBaseOk = baseChecks.every(check => check.ok);
   const modelOk = ollamaCheck ? ollamaCheck.ok && ollamaCheck.modelFound : false;
   const toolsOk = toolCheck ? toolCheck.ok : false;
   const knowledgeOk = knowledgeCheck ? knowledgeCheck.ok : false;
   const approvalsOk = knowledgeCheck
-    ? knowledgeCheck.approvalLogExists && knowledgeCheck.approvalCount > 0
+    ? knowledgeCheck.approvalLogExists && knowledgeCheck.activeApprovalCount > 0
     : false;
+  const archiveOk = knowledgeCheck ? knowledgeCheck.archiveOk : false;
 
   console.log("");
   console.log("Resumen");
@@ -257,9 +295,10 @@ async function main() {
   console.log("Herramientas activas:", toolsOk ? "OK" : "REVISAR");
   console.log("Memoria documental:", knowledgeOk ? "OK" : "REVISAR");
   console.log("Aprobaciones documentales:", approvalsOk ? "OK" : "REVISAR");
+  console.log("Archivado documental:", archiveOk ? "OK" : "REVISAR");
   console.log("");
 
-  if (!systemBaseOk || !modelOk || !toolsOk || !knowledgeOk || !approvalsOk) {
+  if (!systemBaseOk || !modelOk || !toolsOk || !knowledgeOk || !approvalsOk || !archiveOk) {
     process.exit(1);
   }
 }
