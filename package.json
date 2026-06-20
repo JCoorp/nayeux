@@ -17,7 +17,8 @@
     "archive-knowledge": "node src/archiveKnowledge.js",
     "openclaw-inventory": "node src/openclawInventory.js",
     "openclaw-fresh-status": "node src/openclawFreshStatus.js",
-    "openclaw-agents-status": "node src/openclawAgentsStatus.js"
+    "openclaw-agents-status": "node src/openclawAgentsStatus.js",
+    "openclaw-status": "node src/openclawStatus.js"
   },
   "author": "JC",
   "license": "PRIVATE"
