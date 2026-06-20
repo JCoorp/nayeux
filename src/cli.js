@@ -1,96 +1,128 @@
 ﻿import { processWithNaye } from "./nayeCore.js";
 
-function printHelp() {
-  console.log("");
-  console.log("Uso:");
-  console.log('  npm run ask -- "tu instrucción aquí"');
-  console.log("");
-  console.log("Opciones:");
-  console.log("  --cloud                  Habilita nube en modo dry_run");
-  console.log("  --allow-sensitive-cloud  Autoriza nube para datos sensibles en modo dry_run");
-  console.log("");
-  console.log("Ejemplos:");
-  console.log('  npm run ask -- "Hazme un reporte general sobre IA"');
-  console.log('  npm run ask -- "estatus de la pc"');
-  console.log('  npm run ask -- --cloud "Hazme un reporte público sobre IA"');
-  console.log('  npm run ask -- --cloud --allow-sensitive-cloud "Revisa este contrato de empresa"');
-  console.log("");
-}
+function parseArgs(argv) {
+  const flags = {
+    cloudEnabled: false,
+    jcPermissionForCloud: false
+  };
 
-function getArgs() {
-  const args = process.argv.slice(2);
+  const inputParts = [];
 
-  const cloudEnabled = args.includes("--cloud");
-  const jcPermissionForCloud = args.includes("--allow-sensitive-cloud");
+  for (const arg of argv) {
+    if (arg === "--cloud") {
+      flags.cloudEnabled = true;
+      continue;
+    }
 
-  const inputParts = args.filter(arg => {
-    return arg !== "--cloud" && arg !== "--allow-sensitive-cloud";
-  });
+    if (
+      arg === "--allow-sensitive-cloud" ||
+      arg === "--allow-cloud-sensitive" ||
+      arg === "--permit-cloud"
+    ) {
+      flags.jcPermissionForCloud = true;
+      continue;
+    }
 
-  const input = inputParts.join(" ").trim();
+    inputParts.push(arg);
+  }
 
   return {
-    input,
-    cloudEnabled,
-    jcPermissionForCloud
+    input: inputParts.join(" ").trim(),
+    ...flags
   };
 }
 
-function safePreview(input, sensitivity) {
-  if (sensitivity === "critical") {
-    return "[REDACTED_CRITICAL_INPUT]";
-  }
-
-  if (sensitivity === "confidential") {
-    return input.length > 120 ? input.slice(0, 120) + "..." : input;
-  }
-
-  if (sensitivity === "private") {
-    return input.length > 100 ? input.slice(0, 100) + "..." : input;
-  }
-
-  return input;
-}
-
-function printData(data) {
-  if (!data) {
+function printJsonBlock(title, data) {
+  if (data === undefined || data === null) {
     return;
   }
 
   console.log("");
-  console.log("Datos adicionales:");
+  console.log(`${title}:`);
   console.log(JSON.stringify(data, null, 2));
 }
 
-const { input, cloudEnabled, jcPermissionForCloud } = getArgs();
+async function main() {
+  const { input, cloudEnabled, jcPermissionForCloud } = parseArgs(process.argv.slice(2));
 
-if (!input) {
-  printHelp();
-  process.exit(0);
+  if (!input) {
+    console.log("");
+    console.log("Naye Core — CLI");
+    console.log("---------------");
+    console.log('Uso: npm run ask -- "tu instrucción"');
+    console.log("");
+    console.log("Opciones:");
+    console.log("  --cloud                  Habilita proveedor cloud si el router lo permite.");
+    console.log("  --allow-sensitive-cloud  Permite cloud en tareas sensibles cuando aplique.");
+    console.log("");
+    process.exit(0);
+  }
+
+  const response = await processWithNaye({
+    input,
+    cloudEnabled,
+    jcPermissionForCloud
+  });
+
+  const decision = response.decision;
+  const result = response.result;
+
+  console.log("");
+  console.log("Naye Core — CLI");
+  console.log("---------------");
+  console.log("Entrada:", input);
+  console.log("Nube habilitada:", cloudEnabled);
+  console.log("Permiso nube sensible:", jcPermissionForCloud);
+  console.log("Estado:", response.status);
+  console.log("Tipo de tarea:", decision.taskType);
+  console.log("Sensibilidad:", decision.sensitivity);
+  console.log("Proveedor recomendado:", decision.recommendedProvider);
+  console.log("Requiere permiso:", decision.requiresPermission);
+  console.log("Bloquea externo:", decision.blockedExternal);
+  console.log("Motivo:", decision.reason);
+
+  if (result?.provider) {
+    console.log("Proveedor real:", result.provider);
+  }
+
+  if (result?.model) {
+    console.log("Modelo:", result.model);
+  }
+
+  if (result?.tool) {
+    console.log("Herramienta:", result.tool);
+  }
+
+  if (typeof result?.executed === "boolean") {
+    console.log("Ejecutado:", result.executed);
+  }
+
+  console.log("Resultado:", result?.message ?? "Sin mensaje de resultado.");
+
+  if (result?.data) {
+    printJsonBlock("Datos adicionales", result.data);
+  }
+
+  if (result?.metadata) {
+    printJsonBlock("Metadata", result.metadata);
+  }
+
+  if (result?.error) {
+    console.log("Error:", result.error);
+  }
+
+  if (response.audit?.path) {
+    console.log("Log:", response.audit.path);
+  }
+
+  console.log("");
 }
 
-const response = await processWithNaye({
-  input,
-  cloudEnabled,
-  jcPermissionForCloud
+main().catch(error => {
+  console.error("");
+  console.error("Naye Core — Error");
+  console.error("-----------------");
+  console.error(error.message);
+  console.error("");
+  process.exit(1);
 });
-
-console.log("");
-console.log("Naye Core — CLI");
-console.log("---------------");
-console.log("Entrada:", safePreview(input, response.decision.sensitivity));
-console.log("Nube habilitada:", cloudEnabled);
-console.log("Permiso nube sensible:", jcPermissionForCloud);
-console.log("Estado:", response.status);
-console.log("Tipo de tarea:", response.decision.taskType);
-console.log("Sensibilidad:", response.decision.sensitivity);
-console.log("Proveedor recomendado:", response.decision.recommendedProvider);
-console.log("Requiere permiso:", response.decision.requiresPermission);
-console.log("Bloquea externo:", response.decision.blockedExternal);
-console.log("Motivo:", response.decision.reason);
-console.log("Resultado:", response.result.message);
-
-printData(response.result.data);
-
-console.log("Log:", response.audit.filePath);
-console.log("");
