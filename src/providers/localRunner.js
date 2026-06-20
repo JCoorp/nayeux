@@ -51,30 +51,34 @@ function buildLocalPrompt({ input, taskType, sensitivity, config, knowledge }) {
   const knowledgeBlock = knowledge.used
     ? [
         "",
-        "Contexto de memoria documental aprobada:",
+        "MEMORIA DOCUMENTAL APROBADA:",
         knowledge.contextText,
         "",
-        "Instrucción sobre memoria:",
-        "- Usa este contexto solo si es relevante.",
-        "- No inventes fuentes ni documentos que no estén en el contexto.",
-        "- Si el contexto no alcanza para responder, dilo claramente."
+        "REGLAS PARA USAR LA MEMORIA:",
+        "- Usa la memoria documental aprobada como fuente principal cuando el usuario diga 'según la memoria local', 'según los documentos' o pregunte por el estado de Naye.",
+        "- No te quedes con un solo dato si el documento contiene varias secciones relevantes.",
+        "- Si el documento tiene secciones o listas, sintetiza las secciones principales.",
+        "- Si el usuario pregunta por el estado actual de Naye Core, incluye: estado general, componentes consolidados, modelo local, herramientas activas, memoria documental, OpenClaw y regla principal, siempre que aparezcan en el contexto.",
+        "- No inventes fuentes, rutas ni documentos que no estén en el contexto.",
+        "- Si el contexto no alcanza para responder, dilo claramente.",
+        "- Responde de forma estructurada y útil."
       ].join("\n")
     : [
         "",
-        "Contexto de memoria documental aprobada:",
+        "MEMORIA DOCUMENTAL APROBADA:",
         "No se recuperó contexto documental relevante para esta solicitud."
       ].join("\n");
 
   return [
     "Eres Naye, un asistente local privado para apoyar tareas técnicas, documentación, diagnóstico y automatización segura.",
     "",
-    "Reglas:",
+    "REGLAS GENERALES:",
     "- Responde en español.",
     "- Sé claro, directo y práctico.",
     "- No inventes acceso a archivos, equipos o internet.",
     "- Si una acción requiere permisos, dilo explícitamente.",
     "- No reveles secretos, tokens, contraseñas ni datos sensibles.",
-    "- Respeta la política local first: usa recursos locales por defecto.",
+    "- Respeta la política local-first: usa recursos locales por defecto.",
     "- Cuando uses memoria documental, apóyate solo en documentos aprobados.",
     "",
     `Proveedor local configurado: ${config.provider}`,
@@ -83,7 +87,7 @@ function buildLocalPrompt({ input, taskType, sensitivity, config, knowledge }) {
     `Sensibilidad: ${sensitivity}`,
     knowledgeBlock,
     "",
-    "Solicitud del usuario:",
+    "SOLICITUD DEL USUARIO:",
     input
   ].join("\n");
 }
