@@ -114,6 +114,7 @@ function checkKnowledge() {
 
   const approvedDir = path.resolve(config.approvedDir);
   const indexFile = path.resolve(config.indexFile);
+  const approvalLogPath = path.join(path.resolve(config.indexDir), "knowledge-approvals.json");
 
   if (!fs.existsSync(approvedDir)) {
     return {
@@ -136,6 +137,15 @@ function checkKnowledge() {
   const index = readJson(indexFile);
   const documents = Array.isArray(index.documents) ? index.documents : [];
 
+  let approvals = [];
+  let approvalLogExists = false;
+
+  if (fs.existsSync(approvalLogPath)) {
+    approvalLogExists = true;
+    const approvalLog = readJson(approvalLogPath);
+    approvals = Array.isArray(approvalLog.approvals) ? approvalLog.approvals : [];
+  }
+
   return {
     label: "Knowledge Memory",
     ok: documents.length > 0,
@@ -144,9 +154,13 @@ function checkKnowledge() {
       ? `Memoria documental activa con ${documents.length} documento(s) indexado(s)`
       : "La memoria existe, pero no tiene documentos indexados",
     approvedDir,
+    approvalLogPath,
+    approvalLogExists,
+    approvalCount: approvals.length,
     indexedAt: index.indexedAt,
     documentCount: documents.length,
-    documents: documents.map(doc => doc.title)
+    documents: documents.map(doc => doc.title),
+    approvedDocuments: approvals.map(item => item.fileName)
   };
 }
 
@@ -173,7 +187,19 @@ function printCheck(check) {
   }
 
   if (check.documents?.length) {
-    console.log(`     Documentos: ${check.documents.join(", ")}`);
+    console.log(`     Documentos indexados: ${check.documents.join(", ")}`);
+  }
+
+  if (check.approvalLogExists !== undefined) {
+    console.log(`     Registro de aprobaciones: ${check.approvalLogExists ? "Existe" : "No existe"}`);
+  }
+
+  if (check.approvalCount !== undefined) {
+    console.log(`     Documentos aprobados formalmente: ${check.approvalCount}`);
+  }
+
+  if (check.approvedDocuments?.length) {
+    console.log(`     Aprobados: ${check.approvedDocuments.join(", ")}`);
   }
 
   if (check.indexedAt) {
@@ -197,10 +223,8 @@ async function main() {
   checks.push(checkFile(TOOL_REGISTRY_PATH, "tool-registry.json"));
   checks.push(checkFile(KNOWLEDGE_CONFIG_PATH, "knowledge.config.json"));
 
-  let localModelConfig = null;
-
   if (fs.existsSync(LOCAL_MODEL_CONFIG_PATH)) {
-    localModelConfig = readJson(LOCAL_MODEL_CONFIG_PATH);
+    const localModelConfig = readJson(LOCAL_MODEL_CONFIG_PATH);
     checks.push(await checkOllama(localModelConfig));
   }
 
@@ -221,6 +245,9 @@ async function main() {
   const modelOk = ollamaCheck ? ollamaCheck.ok && ollamaCheck.modelFound : false;
   const toolsOk = toolCheck ? toolCheck.ok : false;
   const knowledgeOk = knowledgeCheck ? knowledgeCheck.ok : false;
+  const approvalsOk = knowledgeCheck
+    ? knowledgeCheck.approvalLogExists && knowledgeCheck.approvalCount > 0
+    : false;
 
   console.log("");
   console.log("Resumen");
@@ -229,9 +256,10 @@ async function main() {
   console.log("Modelo local listo:", modelOk ? "OK" : "REVISAR");
   console.log("Herramientas activas:", toolsOk ? "OK" : "REVISAR");
   console.log("Memoria documental:", knowledgeOk ? "OK" : "REVISAR");
+  console.log("Aprobaciones documentales:", approvalsOk ? "OK" : "REVISAR");
   console.log("");
 
-  if (!systemBaseOk || !modelOk || !toolsOk || !knowledgeOk) {
+  if (!systemBaseOk || !modelOk || !toolsOk || !knowledgeOk || !approvalsOk) {
     process.exit(1);
   }
 }
