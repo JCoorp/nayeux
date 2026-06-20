@@ -12,7 +12,8 @@
     "activate-tool": "node src/toolActivator.js",
     "doctor": "node src/doctor.js",
     "index-knowledge": "node src/knowledgeIndexer.js",
-    "approve-knowledge": "node src/knowledgeApprover.js"
+    "approve-knowledge": "node src/knowledgeApprover.js",
+    "knowledge-status": "node src/knowledgeStatus.js"
   },
   "author": "JC",
   "license": "PRIVATE"
