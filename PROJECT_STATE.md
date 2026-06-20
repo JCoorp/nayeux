@@ -306,3 +306,38 @@ Resultado esperado en Doctor:
 - OpenClaw Fresh: OK
 
 Esto significa que Naye Core ya supervisa el estado de OpenClaw Fresh desde su diagnóstico principal, sin habilitar ejecución operativa todavía.
+
+---
+
+## Actualización: OpenClaw Proposal Review Flow
+
+Se implementó y validó el flujo seguro de propuestas de OpenClaw Fresh.
+
+Comandos disponibles:
+
+- npm run openclaw-propose
+- npm run openclaw-proposals-status
+- npm run openclaw-approve
+- npm run openclaw-reject
+- npm run openclaw-status
+
+Estado validado:
+
+- Propuestas pendientes: 1
+- Acciones aprobadas: 1
+- Acciones rechazadas: 1
+- Propuestas por revisar: 0
+- OpenClaw Status: OK
+
+Reglas de seguridad confirmadas:
+
+- Las propuestas no ejecutan acciones.
+- Las acciones aprobadas quedan en estado approved_not_executed.
+- Incluso aprobadas, execution.allowed permanece en false.
+- Toda aprobación queda registrada con Usuario Administrador designado.
+- Las propuestas rechazadas se mueven a rejected-actions y no pueden ejecutarse.
+- OpenClaw sigue sin conexión operativa directa.
+
+Conclusión:
+
+OpenClaw Fresh ya puede proponer, aprobar, rechazar y auditar acciones, pero todavía no puede ejecutar cambios en el sistema.
