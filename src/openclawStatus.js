@@ -1,20 +1,26 @@
-﻿import { spawnSync } from "child_process";
+﻿import path from "path";
+import { spawnSync } from "child_process";
 
-function runCheck(label, script) {
+const ROOT = path.resolve("F:/NayeVault/naye-core");
+
+function runCheck(label, relativeScriptPath) {
   console.log("");
   console.log(`=== ${label} ===`);
   console.log("");
 
-  const result = spawnSync("npm", ["run", script], {
-    shell: true,
+  const fullScriptPath = path.join(ROOT, relativeScriptPath);
+
+  const result = spawnSync(process.execPath, [fullScriptPath], {
+    cwd: ROOT,
     stdio: "inherit"
   });
 
   return {
     label,
-    script,
+    script: relativeScriptPath,
     ok: result.status === 0,
-    status: result.status
+    status: result.status,
+    error: result.error?.message ?? null
   };
 }
 
@@ -23,8 +29,8 @@ console.log("Naye OpenClaw Status");
 console.log("--------------------");
 
 const checks = [
-  runCheck("OpenClaw Fresh Status", "openclaw-fresh-status"),
-  runCheck("OpenClaw Agents Status", "openclaw-agents-status")
+  runCheck("OpenClaw Fresh Status", "src/openclawFreshStatus.js"),
+  runCheck("OpenClaw Agents Status", "src/openclawAgentsStatus.js")
 ];
 
 const failed = checks.filter(check => !check.ok);
@@ -35,6 +41,10 @@ console.log("------------------------------");
 
 for (const check of checks) {
   console.log(`${check.ok ? "[OK]" : "[REVISAR]"} ${check.label} (${check.script})`);
+
+  if (check.error) {
+    console.log(`     Error: ${check.error}`);
+  }
 }
 
 console.log("");
