@@ -282,3 +282,27 @@ Resultado esperado:
 - Agentes seguros: 1
 - Agentes por revisar: 0
 - Estado: OK
+
+---
+
+## Actualización: OpenClaw integrado en Naye Doctor
+
+Se integró la validación general de OpenClaw Fresh dentro de Naye Doctor.
+
+Ahora el comando:
+
+npm run doctor
+
+también valida:
+
+- OpenClaw Fresh Status
+- OpenClaw Agents Status
+- Configuración fresh segura
+- Bridge preparado pero no conectado operativamente
+- Agente naye-ops preparado pero no activo
+
+Resultado esperado en Doctor:
+
+- OpenClaw Fresh: OK
+
+Esto significa que Naye Core ya supervisa el estado de OpenClaw Fresh desde su diagnóstico principal, sin habilitar ejecución operativa todavía.
