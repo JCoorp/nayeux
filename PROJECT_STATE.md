@@ -248,3 +248,37 @@ Resultado esperado:
 - Agentes seguros: 1
 - Agentes por revisar: 0
 - Estado: OK
+
+---
+
+## Actualización: OpenClaw Fresh Agent Registry
+
+Se creó el primer agente preparado de OpenClaw Fresh:
+
+- Agent ID: naye-ops
+- Nombre: Naye Ops
+- Estado: prepared_not_active
+- Runtime: deshabilitado
+- Ejecución: no permitida
+- Red: deshabilitada
+- Proveedores externos: deshabilitados
+- Modificación de archivos: deshabilitada
+- Acceso a credenciales: deshabilitado
+- Datos heredados: deshabilitados
+- Requiere aprobación del bridge: true
+
+Archivos creados fuera del repo:
+
+- F:\NayeVault\openclaw\fresh\agents\naye-ops.agent.json
+- F:\NayeVault\openclaw\fresh\prompts\naye-ops.system.md
+
+Comando de validación:
+
+npm run openclaw-agents-status
+
+Resultado esperado:
+
+- Agentes totales: 1
+- Agentes seguros: 1
+- Agentes por revisar: 0
+- Estado: OK
