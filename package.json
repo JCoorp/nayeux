@@ -24,7 +24,8 @@
     "openclaw-approve": "node src/openclawApprove.js",
     "openclaw-reject": "node src/openclawReject.js",
     "openclaw-execution-plan": "node src/openclawExecutionPlan.js",
-    "openclaw-execution-plans-status": "node src/openclawExecutionPlansStatus.js"
+    "openclaw-execution-plans-status": "node src/openclawExecutionPlansStatus.js",
+    "openclaw-approve-execution": "node src/openclawApproveExecution.js"
   },
   "author": "JC",
   "license": "PRIVATE"
