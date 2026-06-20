@@ -19,7 +19,8 @@
     "openclaw-fresh-status": "node src/openclawFreshStatus.js",
     "openclaw-agents-status": "node src/openclawAgentsStatus.js",
     "openclaw-status": "node src/openclawStatus.js",
-    "openclaw-propose": "node src/openclawPropose.js"
+    "openclaw-propose": "node src/openclawPropose.js",
+    "openclaw-proposals-status": "node src/openclawProposalsStatus.js"
   },
   "author": "JC",
   "license": "PRIVATE"
