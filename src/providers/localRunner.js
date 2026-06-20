@@ -1,5 +1,6 @@
 ﻿import fs from "fs";
 import path from "path";
+import { retrieveKnowledgeContext } from "../knowledgeRetriever.js";
 
 const ROOT = path.resolve("F:/NayeVault/naye-core");
 const LOCAL_MODEL_CONFIG_PATH = path.join(ROOT, "config", "local-model.config.json");
@@ -46,7 +47,24 @@ function loadLocalModelConfig() {
   };
 }
 
-function buildLocalPrompt({ input, taskType, sensitivity, config }) {
+function buildLocalPrompt({ input, taskType, sensitivity, config, knowledge }) {
+  const knowledgeBlock = knowledge.used
+    ? [
+        "",
+        "Contexto de memoria documental aprobada:",
+        knowledge.contextText,
+        "",
+        "Instrucción sobre memoria:",
+        "- Usa este contexto solo si es relevante.",
+        "- No inventes fuentes ni documentos que no estén en el contexto.",
+        "- Si el contexto no alcanza para responder, dilo claramente."
+      ].join("\n")
+    : [
+        "",
+        "Contexto de memoria documental aprobada:",
+        "No se recuperó contexto documental relevante para esta solicitud."
+      ].join("\n");
+
   return [
     "Eres Naye, un asistente local privado para apoyar tareas técnicas, documentación, diagnóstico y automatización segura.",
     "",
@@ -57,11 +75,13 @@ function buildLocalPrompt({ input, taskType, sensitivity, config }) {
     "- Si una acción requiere permisos, dilo explícitamente.",
     "- No reveles secretos, tokens, contraseñas ni datos sensibles.",
     "- Respeta la política local first: usa recursos locales por defecto.",
+    "- Cuando uses memoria documental, apóyate solo en documentos aprobados.",
     "",
     `Proveedor local configurado: ${config.provider}`,
     `Modelo configurado: ${config.model}`,
     `Tipo de tarea: ${taskType}`,
     `Sensibilidad: ${sensitivity}`,
+    knowledgeBlock,
     "",
     "Solicitud del usuario:",
     input
@@ -70,6 +90,7 @@ function buildLocalPrompt({ input, taskType, sensitivity, config }) {
 
 async function runLocalModel({ input, taskType, sensitivity }) {
   const config = loadLocalModelConfig();
+  const knowledge = retrieveKnowledgeContext({ input });
 
   const ollamaUrl = process.env.OLLAMA_URL ?? config.url;
   const ollamaModel = process.env.OLLAMA_MODEL ?? config.model;
@@ -83,7 +104,9 @@ async function runLocalModel({ input, taskType, sensitivity }) {
       message: "El modelo local está deshabilitado en config/local-model.config.json.",
       metadata: {
         configLoaded: config.configLoaded,
-        configPath: config.configPath
+        configPath: config.configPath,
+        knowledgeUsed: knowledge.used,
+        knowledgeMessage: knowledge.message
       }
     };
   }
@@ -95,7 +118,8 @@ async function runLocalModel({ input, taskType, sensitivity }) {
     config: {
       ...config,
       model: ollamaModel
-    }
+    },
+    knowledge
   });
 
   try {
@@ -126,7 +150,10 @@ async function runLocalModel({ input, taskType, sensitivity }) {
         metadata: {
           configLoaded: config.configLoaded,
           configPath: config.configPath,
-          url: ollamaUrl
+          url: ollamaUrl,
+          knowledgeUsed: knowledge.used,
+          knowledgeMessage: knowledge.message,
+          knowledgeSources: knowledge.sources
         }
       };
     }
@@ -143,6 +170,9 @@ async function runLocalModel({ input, taskType, sensitivity }) {
         configPath: config.configPath,
         url: ollamaUrl,
         temperature,
+        knowledgeUsed: knowledge.used,
+        knowledgeMessage: knowledge.message,
+        knowledgeSources: knowledge.sources,
         totalDuration: data.total_duration ?? null,
         loadDuration: data.load_duration ?? null,
         promptEvalCount: data.prompt_eval_count ?? null,
@@ -159,7 +189,10 @@ async function runLocalModel({ input, taskType, sensitivity }) {
       metadata: {
         configLoaded: config.configLoaded,
         configPath: config.configPath,
-        url: ollamaUrl
+        url: ollamaUrl,
+        knowledgeUsed: knowledge.used,
+        knowledgeMessage: knowledge.message,
+        knowledgeSources: knowledge.sources
       }
     };
   }
