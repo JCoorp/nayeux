@@ -129,14 +129,10 @@ function main() {
       value: policy.policySupportsRealExecution
     },
     {
-      name: "executor_not_implemented_yet",
-      ok: policy.executorImplemented === false,
-      value: policy.executorImplemented
+      name: "executor_implemented", ok: policy.executorImplemented === true, value: policy.executorImplemented
     },
     {
-      name: "real_execution_disabled_until_executor_exists",
-      ok: policy.realExecutionEnabled === false,
-      value: policy.realExecutionEnabled
+      name: "real_execution_enabled", ok: policy.realExecutionEnabled === true, value: policy.realExecutionEnabled
     },
     {
       name: "dry_run_only_false",
@@ -373,3 +369,4 @@ function main() {
 }
 
 main();
+

@@ -1,4 +1,4 @@
-﻿{
+{
   "system": "Naye Core",
   "component": "OpenClaw Execution Policy",
   "version": "0.2.0",
@@ -6,8 +6,8 @@
   "mode": "controlled_real_execution",
   "defaultAction": "require_approval",
   "policySupportsRealExecution": true,
-  "executorImplemented": false,
-  "realExecutionEnabled": false,
+  "executorImplemented": true,
+  "realExecutionEnabled": true,
   "dryRunOnly": false,
   "philosophy": {
     "goal": "Naye debe poder actuar de forma útil en el proyecto, no solo observar.",
@@ -100,7 +100,9 @@
       "commandId": "npm_run",
       "description": "Ejecutar scripts npm del proyecto.",
       "executable": "npm",
-      "allowedArgsPrefix": ["run"],
+      "allowedArgsPrefix": [
+        "run"
+      ],
       "cwd": "F:/NayeVault/naye-core",
       "requiresApproval": true,
       "requiresAuditLog": true
@@ -118,7 +120,9 @@
       "commandId": "git_status",
       "description": "Consultar estado Git.",
       "executable": "git",
-      "allowedExactArgs": ["status"],
+      "allowedExactArgs": [
+        "status"
+      ],
       "cwd": "F:/NayeVault/naye-core",
       "requiresApproval": false,
       "requiresAuditLog": true
@@ -127,7 +131,9 @@
       "commandId": "git_diff",
       "description": "Consultar diferencias Git.",
       "executable": "git",
-      "allowedExactArgs": ["diff"],
+      "allowedExactArgs": [
+        "diff"
+      ],
       "cwd": "F:/NayeVault/naye-core",
       "requiresApproval": false,
       "requiresAuditLog": true
@@ -136,7 +142,9 @@
       "commandId": "git_add",
       "description": "Preparar archivos para commit.",
       "executable": "git",
-      "allowedArgsPrefix": ["add"],
+      "allowedArgsPrefix": [
+        "add"
+      ],
       "cwd": "F:/NayeVault/naye-core",
       "requiresApproval": true,
       "requiresAuditLog": true
@@ -145,7 +153,9 @@
       "commandId": "git_commit",
       "description": "Crear commit local.",
       "executable": "git",
-      "allowedArgsPrefix": ["commit"],
+      "allowedArgsPrefix": [
+        "commit"
+      ],
       "cwd": "F:/NayeVault/naye-core",
       "requiresApproval": true,
       "requiresAuditLog": true
@@ -158,5 +168,13 @@
     "installPackages": "approval_required",
     "networkRequests": "approval_required",
     "externalProviderCalls": "approval_required"
+  },
+  "controlledExecutor": {
+    "enabled": true,
+    "executorId": "openclaw-controlled-executor",
+    "firstAllowedRealCommand": "npm run openclaw-status",
+    "scope": "F:/NayeVault",
+    "requiresFinalExecutorGate": true,
+    "requiresAuditLog": true
   }
 }
