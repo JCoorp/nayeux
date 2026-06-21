@@ -224,6 +224,14 @@ function validateCommand(policy, gate) {
   return errors;
 }
 
+function quoteForCmd(arg) {
+  if (/^[a-zA-Z0-9_\-.:/\\]+$/.test(arg)) {
+    return arg;
+  }
+
+  return `"${String(arg).replace(/"/g, `\"`)}"`;
+}
+
 function resolveExecutable(commandParts) {
   const [executable, ...args] = commandParts;
 
@@ -237,6 +245,16 @@ function resolveExecutable(commandParts) {
     return {
       executableToRun: process.execPath,
       argsToRun: [npmCli, ...args]
+    };
+  }
+
+  if (executable === "openclaw" && process.platform === "win32") {
+    const comspec = process.env.ComSpec || "C:\\Windows\\System32\\cmd.exe";
+    const commandLine = [executable, ...args].map(quoteForCmd).join(" ");
+
+    return {
+      executableToRun: comspec,
+      argsToRun: ["/d", "/s", "/c", commandLine]
     };
   }
 
@@ -380,3 +398,4 @@ function main() {
 }
 
 main();
+

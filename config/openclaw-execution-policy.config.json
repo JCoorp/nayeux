@@ -159,6 +159,91 @@
       "cwd": "F:/NayeVault/naye-core",
       "requiresApproval": true,
       "requiresAuditLog": true
+    },
+    {
+      "commandId": "openclaw_version",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "--version"
+      ],
+      "description": "Verify installed OpenClaw CLI version"
+    },
+    {
+      "commandId": "openclaw_help",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "--help"
+      ],
+      "description": "Show OpenClaw CLI help"
+    },
+    {
+      "commandId": "openclaw_doctor",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "doctor"
+      ],
+      "description": "Diagnose OpenClaw local setup"
+    },
+    {
+      "commandId": "openclaw_status",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "status"
+      ],
+      "description": "Show OpenClaw Gateway/channel/model status"
+    },
+    {
+      "commandId": "openclaw_config_validate",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "config",
+        "validate"
+      ],
+      "description": "Validate OpenClaw configuration"
+    },
+    {
+      "commandId": "openclaw_security",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "security"
+      ],
+      "description": "Run OpenClaw security command group safely"
     }
   ],
   "destructiveActions": {
@@ -175,6 +260,15 @@
     "firstAllowedRealCommand": "npm run openclaw-status",
     "scope": "F:/NayeVault",
     "requiresFinalExecutorGate": true,
-    "requiresAuditLog": true
+    "requiresAuditLog": true,
+    "openclawCliEnabled": true,
+    "openclawCommands": [
+      "openclaw_version",
+      "openclaw_help",
+      "openclaw_doctor",
+      "openclaw_status",
+      "openclaw_config_validate",
+      "openclaw_security"
+    ]
   }
 }
