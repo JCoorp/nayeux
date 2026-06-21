@@ -34,7 +34,8 @@ const checks = [
   runCheck("OpenClaw Proposals Status", "src/openclawProposalsStatus.js"),
   runCheck("OpenClaw Execution Plans Status", "src/openclawExecutionPlansStatus.js"),
   runCheck("OpenClaw Execution Approvals Status", "src/openclawExecutionApprovalsStatus.js"),
-  runCheck("OpenClaw Execution Runs Status", "src/openclawExecutionRunsStatus.js")
+  runCheck("OpenClaw Execution Runs Status", "src/openclawExecutionRunsStatus.js"),
+  runCheck("OpenClaw Execution Policy Status", "src/openclawExecutionPolicyStatus.js")
 ];
 
 const failed = checks.filter(check => !check.ok);
