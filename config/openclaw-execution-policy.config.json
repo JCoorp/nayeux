@@ -1,0 +1,162 @@
+﻿{
+  "system": "Naye Core",
+  "component": "OpenClaw Execution Policy",
+  "version": "0.2.0",
+  "enabled": true,
+  "mode": "controlled_real_execution",
+  "defaultAction": "require_approval",
+  "policySupportsRealExecution": true,
+  "executorImplemented": false,
+  "realExecutionEnabled": false,
+  "dryRunOnly": false,
+  "philosophy": {
+    "goal": "Naye debe poder actuar de forma útil en el proyecto, no solo observar.",
+    "principle": "Permitir acciones reales dentro del espacio autorizado y bloquear solo acciones sensibles, destructivas o fuera de alcance."
+  },
+  "requirements": {
+    "requireProposalApproval": true,
+    "requireExecutionPlan": true,
+    "requireExecutionApproval": true,
+    "requireDryRunBeforeRealExecution": true,
+    "requireFinalExecutorGate": true,
+    "requireAuditLog": true,
+    "authorizationRole": "Usuario Administrador designado"
+  },
+  "workspaceScope": {
+    "primaryWorkspace": "F:/NayeVault",
+    "projectRoot": "F:/NayeVault/naye-core",
+    "runtimeRoot": "F:/NayeVault/openclaw/fresh/runtime",
+    "allowedReadPaths": [
+      "F:/NayeVault"
+    ],
+    "allowedWritePaths": [
+      "F:/NayeVault"
+    ],
+    "allowedProjectPaths": [
+      "F:/NayeVault/naye-core",
+      "F:/NayeVault/openclaw/fresh",
+      "F:/NayeVault/core",
+      "F:/NayeVault/devices",
+      "F:/NayeVault/logs"
+    ]
+  },
+  "capabilities": {
+    "allowReadFilesInWorkspace": true,
+    "allowCreateFilesInWorkspace": true,
+    "allowEditFilesInWorkspace": true,
+    "allowAppendFilesInWorkspace": true,
+    "allowCreateDirectoriesInWorkspace": true,
+    "allowMoveFilesInWorkspaceWithApproval": true,
+    "allowDeleteFilesWithExplicitApprovalAndBackup": true,
+    "allowShellForWhitelistedCommands": true,
+    "allowNpmScripts": true,
+    "allowNodeScripts": true,
+    "allowGitStatus": true,
+    "allowGitDiff": true,
+    "allowGitAdd": true,
+    "allowGitCommitWithApproval": true,
+    "allowPackageInstallWithApproval": true,
+    "allowNetworkWithApproval": true,
+    "allowExternalProvidersWithApproval": true,
+    "allowWorkspaceExpansionWithApproval": true
+  },
+  "blockedSensitiveAccess": {
+    "allowCredentialAccess": false,
+    "allowCookies": false,
+    "allowTokens": false,
+    "allowBrowserProfiles": false,
+    "allowWhatsAppData": false,
+    "allowPasswordManagers": false,
+    "allowSshKeys": false,
+    "allowPrivateKeys": false,
+    "allowSystemSecrets": false
+  },
+  "blockedPaths": [
+    "C:/Windows",
+    "C:/Program Files",
+    "C:/Program Files (x86)",
+    "C:/Users",
+    "F:/.ssh",
+    "F:/System Volume Information",
+    "F:/$Recycle.Bin"
+  ],
+  "blockedFilePatterns": [
+    ".env",
+    ".env.*",
+    "*token*",
+    "*secret*",
+    "*credential*",
+    "*password*",
+    "*.key",
+    "*.pem",
+    "*.pfx",
+    "*.p12",
+    "cookies.sqlite",
+    "Login Data",
+    "Local State"
+  ],
+  "allowedCommands": [
+    {
+      "commandId": "npm_run",
+      "description": "Ejecutar scripts npm del proyecto.",
+      "executable": "npm",
+      "allowedArgsPrefix": ["run"],
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true
+    },
+    {
+      "commandId": "node_project_script",
+      "description": "Ejecutar scripts Node dentro de src.",
+      "executable": "node",
+      "allowedPathPrefix": "F:/NayeVault/naye-core/src",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true
+    },
+    {
+      "commandId": "git_status",
+      "description": "Consultar estado Git.",
+      "executable": "git",
+      "allowedExactArgs": ["status"],
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": false,
+      "requiresAuditLog": true
+    },
+    {
+      "commandId": "git_diff",
+      "description": "Consultar diferencias Git.",
+      "executable": "git",
+      "allowedExactArgs": ["diff"],
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": false,
+      "requiresAuditLog": true
+    },
+    {
+      "commandId": "git_add",
+      "description": "Preparar archivos para commit.",
+      "executable": "git",
+      "allowedArgsPrefix": ["add"],
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true
+    },
+    {
+      "commandId": "git_commit",
+      "description": "Crear commit local.",
+      "executable": "git",
+      "allowedArgsPrefix": ["commit"],
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true
+    }
+  ],
+  "destructiveActions": {
+    "deleteFiles": "explicit_approval_and_backup_required",
+    "overwriteFiles": "approval_required",
+    "moveFiles": "approval_required",
+    "installPackages": "approval_required",
+    "networkRequests": "approval_required",
+    "externalProviderCalls": "approval_required"
+  }
+}
