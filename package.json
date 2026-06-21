@@ -27,7 +27,8 @@
     "openclaw-execution-plans-status": "node src/openclawExecutionPlansStatus.js",
     "openclaw-approve-execution": "node src/openclawApproveExecution.js",
     "openclaw-execution-approvals-status": "node src/openclawExecutionApprovalsStatus.js",
-    "openclaw-execute-dry-run": "node src/openclawExecuteDryRun.js"
+    "openclaw-execute-dry-run": "node src/openclawExecuteDryRun.js",
+    "openclaw-execution-runs-status": "node src/openclawExecutionRunsStatus.js"
   },
   "author": "JC",
   "license": "PRIVATE"
