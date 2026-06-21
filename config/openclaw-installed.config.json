@@ -1,0 +1,43 @@
+﻿{
+  "system": "Naye Core",
+  "component": "OpenClaw Installed Runtime",
+  "version": "0.1.0",
+  "installed": true,
+  "cli": {
+    "command": "openclaw",
+    "version": "OpenClaw 2026.6.9 (c645ec4)",
+    "installedGlobally": true,
+    "validated": true
+  },
+  "runtime": {
+    "node": "v24.16.0",
+    "npm": "11.13.0",
+    "os": "Windows",
+    "projectRoot": "F:/NayeVault/naye-core",
+    "nayeVault": "F:/NayeVault"
+  },
+  "integration": {
+    "status": "installed_not_onboarded",
+    "gatewayConfigured": false,
+    "channelsConfigured": false,
+    "modelsConfigured": false,
+    "nayeControlledExecution": true
+  },
+  "safety": {
+    "doNotRestoreLegacyBackup": true,
+    "doNotImportCookies": true,
+    "doNotImportTokens": true,
+    "doNotImportBrowserProfiles": true,
+    "doNotImportWhatsAppData": true,
+    "requireNayeApprovalForOnboarding": true,
+    "requireNayeApprovalForChannels": true,
+    "requireNayeApprovalForSecrets": true
+  },
+  "allowedNextCommands": [
+    "openclaw doctor",
+    "openclaw status",
+    "openclaw config validate",
+    "openclaw security",
+    "openclaw onboard"
+  ]
+}
