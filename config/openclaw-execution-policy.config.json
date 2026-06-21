@@ -244,6 +244,54 @@
         "security"
       ],
       "description": "Run OpenClaw security command group safely"
+    },
+    {
+      "commandId": "openclaw_setup",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "setup"
+      ],
+      "description": "Initialize baseline OpenClaw config and workspace without channels"
+    },
+    {
+      "commandId": "openclaw_config_gateway_mode_local",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "config",
+        "set",
+        "gateway.mode",
+        "local"
+      ],
+      "description": "Set OpenClaw Gateway mode to local"
+    },
+    {
+      "commandId": "openclaw_config_disable_memory_search",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "config",
+        "set",
+        "agents.defaults.memorySearch.enabled",
+        "false"
+      ],
+      "description": "Disable OpenAI semantic memory search until a provider is intentionally configured"
     }
   ],
   "destructiveActions": {
