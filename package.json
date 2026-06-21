@@ -30,7 +30,8 @@
     "openclaw-execute-dry-run": "node src/openclawExecuteDryRun.js",
     "openclaw-execution-runs-status": "node src/openclawExecutionRunsStatus.js",
     "openclaw-execution-policy-status": "node src/openclawExecutionPolicyStatus.js",
-    "openclaw-final-executor-gate": "node src/openclawFinalExecutorGate.js"
+    "openclaw-final-executor-gate": "node src/openclawFinalExecutorGate.js",
+    "openclaw-final-executor-gates-status": "node src/openclawFinalExecutorGatesStatus.js"
   },
   "author": "JC",
   "license": "PRIVATE"
