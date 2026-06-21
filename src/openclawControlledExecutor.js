@@ -224,6 +224,28 @@ function validateCommand(policy, gate) {
   return errors;
 }
 
+function resolveExecutable(commandParts) {
+  const [executable, ...args] = commandParts;
+
+  if (executable === "npm") {
+    const npmCli = process.env.npm_execpath;
+
+    if (!npmCli) {
+      throw new Error("No se encontró process.env.npm_execpath para ejecutar npm sin shell.");
+    }
+
+    return {
+      executableToRun: process.execPath,
+      argsToRun: [npmCli, ...args]
+    };
+  }
+
+  return {
+    executableToRun: executable,
+    argsToRun: args
+  };
+}
+
 function main() {
   ensureDir(GATES_DIR);
   ensureDir(EXECUTIONS_DIR);
@@ -264,8 +286,9 @@ function main() {
   }
 
   const commandParts = gate.requestedCommand.command;
-  const [executable, ...args] = commandParts;
   const cwd = gate.requestedCommand.cwd ?? "F:/NayeVault/naye-core";
+
+  const { executableToRun, argsToRun } = resolveExecutable(commandParts);
 
   const now = new Date();
   const executionId = `openclaw-controlled-execution-${timestampForFile(now)}`;
@@ -279,22 +302,6 @@ function main() {
   console.log("CWD:", cwd);
   console.log("Ejecutando comando real controlado...");
   console.log("");
-
-  const executableToRun = process.platform === "win32" && executable === "npm" ? "npm.cmd" : executable;
-
-  let executableToRun = executable;
-  let argsToRun = args;
-
-  if (executable === "npm") {
-    const npmCli = process.env.npm_execpath;
-
-    if (!npmCli) {
-      throw new Error("No se encontró process.env.npm_execpath para ejecutar npm sin shell.");
-    }
-
-    executableToRun = process.execPath;
-    argsToRun = [npmCli, ...args];
-  }
 
   const result = spawnSync(executableToRun, argsToRun, {
     cwd,
@@ -319,8 +326,8 @@ function main() {
     },
     command: {
       commandId: gate.requestedCommand.commandId,
-      executable,
-      args,
+      executable: commandParts[0],
+      args: commandParts.slice(1),
       commandLine: commandParts.join(" "),
       cwd
     },
@@ -373,5 +380,3 @@ function main() {
 }
 
 main();
-
-
