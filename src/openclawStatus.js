@@ -1,65 +1,112 @@
-﻿import path from "path";
-import { spawnSync } from "child_process";
+﻿import { spawnSync } from "child_process";
 
-const ROOT = path.resolve("F:/NayeVault/naye-core");
+const CHECKS = [
+  {
+    name: "OpenClaw Fresh Status",
+    script: "src/openclawFreshStatus.js"
+  },
+  {
+    name: "OpenClaw Agents Status",
+    script: "src/openclawAgentsStatus.js"
+  },
+  {
+    name: "OpenClaw Proposals Status",
+    script: "src/openclawProposalsStatus.js"
+  },
+  {
+    name: "OpenClaw Execution Plans Status",
+    script: "src/openclawExecutionPlansStatus.js"
+  },
+  {
+    name: "OpenClaw Execution Approvals Status",
+    script: "src/openclawExecutionApprovalsStatus.js"
+  },
+  {
+    name: "OpenClaw Execution Runs Status",
+    script: "src/openclawExecutionRunsStatus.js"
+  },
+  {
+    name: "OpenClaw Execution Policy Status",
+    script: "src/openclawExecutionPolicyStatus.js"
+  },
+  {
+    name: "OpenClaw Final Executor Gates Status",
+    script: "src/openclawFinalExecutorGatesStatus.js"
+  },
+  {
+    name: "OpenClaw Controlled Executions Status",
+    script: "src/openclawControlledExecutionsStatus.js"
+  },
+  {
+    name: "OpenClaw Installed Runtime Status",
+    script: "src/openclawInstalledStatus.js"
+  }
+];
 
-function runCheck(label, relativeScriptPath) {
-  console.log("");
-  console.log(`=== ${label} ===`);
-  console.log("");
-
-  const fullScriptPath = path.join(ROOT, relativeScriptPath);
-
-  const result = spawnSync(process.execPath, [fullScriptPath], {
-    cwd: ROOT,
-    stdio: "inherit"
+function runCheck(check) {
+  const result = spawnSync(process.execPath, [check.script], {
+    cwd: "F:/NayeVault/naye-core",
+    encoding: "utf8",
+    shell: false,
+    maxBuffer: 1024 * 1024 * 30
   });
 
+  if (result.stdout) {
+    console.log(result.stdout);
+  }
+
+  if (result.stderr) {
+    console.error(result.stderr);
+  }
+
+  if (result.error) {
+    console.error("Process error:", result.error.message);
+  }
+
   return {
-    label,
-    script: relativeScriptPath,
+    ...check,
     ok: result.status === 0,
-    status: result.status,
+    exitCode: result.status,
     error: result.error?.message ?? null
   };
 }
 
-console.log("");
-console.log("Naye OpenClaw Status");
-console.log("--------------------");
+function main() {
+  console.log("");
+  console.log("Naye OpenClaw Status");
+  console.log("--------------------");
 
-const checks = [
-  runCheck("OpenClaw Fresh Status", "src/openclawFreshStatus.js"),
-  runCheck("OpenClaw Agents Status", "src/openclawAgentsStatus.js"),
-  runCheck("OpenClaw Proposals Status", "src/openclawProposalsStatus.js"),
-  runCheck("OpenClaw Execution Plans Status", "src/openclawExecutionPlansStatus.js"),
-  runCheck("OpenClaw Execution Approvals Status", "src/openclawExecutionApprovalsStatus.js"),
-  runCheck("OpenClaw Execution Runs Status", "src/openclawExecutionRunsStatus.js"),
-  runCheck("OpenClaw Execution Policy Status", "src/openclawExecutionPolicyStatus.js"),
-  runCheck("OpenClaw Final Executor Gates Status", "src/openclawFinalExecutorGatesStatus.js")
-];
+  const results = [];
 
-const failed = checks.filter(check => !check.ok);
+  for (const check of CHECKS) {
+    console.log("");
+    console.log(`=== ${check.name} ===`);
+    console.log("");
 
-console.log("");
-console.log("Naye OpenClaw Status — Resumen");
-console.log("------------------------------");
+    const result = runCheck(check);
+    results.push(result);
+  }
 
-for (const check of checks) {
-  console.log(`${check.ok ? "[OK]" : "[REVISAR]"} ${check.label} (${check.script})`);
+  const failed = results.filter(result => !result.ok);
 
-  if (check.error) {
-    console.log(`     Error: ${check.error}`);
+  console.log("");
+  console.log("Naye OpenClaw Status — Resumen");
+  console.log("------------------------------");
+
+  for (const result of results) {
+    console.log(`[${result.ok ? "OK" : "REVISAR"}] ${result.name} (${result.script})`);
+  }
+
+  console.log("");
+  console.log("Checks totales:", results.length);
+  console.log("Checks OK:", results.filter(result => result.ok).length);
+  console.log("Checks por revisar:", failed.length);
+  console.log("Estado:", failed.length === 0 ? "OK" : "REVISAR");
+  console.log("");
+
+  if (failed.length > 0) {
+    process.exit(1);
   }
 }
 
-console.log("");
-console.log("Checks totales:", checks.length);
-console.log("Checks OK:", checks.filter(check => check.ok).length);
-console.log("Checks por revisar:", failed.length);
-console.log("Estado:", failed.length === 0 ? "OK" : "REVISAR");
-console.log("");
-
-if (failed.length > 0) {
-  process.exit(1);
-}
+main();
