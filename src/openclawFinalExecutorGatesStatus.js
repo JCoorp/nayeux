@@ -4,6 +4,11 @@ import path from "path";
 const RUNTIME_ROOT = path.resolve("F:/NayeVault/openclaw/fresh/runtime");
 const GATES_DIR = path.join(RUNTIME_ROOT, "final-executor-gates");
 
+const VALID_STATUSES = [
+  "final_gate_valid_executor_not_enabled",
+  "final_gate_passed_ready_for_controlled_executor"
+];
+
 function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
 }
@@ -35,6 +40,22 @@ function readJsonSafe(filePath) {
   }
 }
 
+function statusMatchesExecutorState(gate) {
+  if (gate.status === "final_gate_valid_executor_not_enabled") {
+    return gate.executor?.canProceedToRealExecutor === false;
+  }
+
+  if (gate.status === "final_gate_passed_ready_for_controlled_executor") {
+    return (
+      gate.executor?.executorImplemented === true &&
+      gate.executor?.realExecutionEnabled === true &&
+      gate.executor?.canProceedToRealExecutor === true
+    );
+  }
+
+  return false;
+}
+
 function inspectGate(filePath) {
   const parsed = readJsonSafe(filePath);
 
@@ -58,8 +79,13 @@ function inspectGate(filePath) {
       value: gate.mode
     },
     {
-      name: "status_valid_executor_not_enabled",
-      ok: gate.status === "final_gate_valid_executor_not_enabled",
+      name: "status_is_valid_gate_status",
+      ok: VALID_STATUSES.includes(gate.status),
+      value: gate.status
+    },
+    {
+      name: "status_matches_executor_state",
+      ok: statusMatchesExecutorState(gate),
       value: gate.status
     },
     {
@@ -81,21 +107,6 @@ function inspectGate(filePath) {
       name: "validation_errors_empty",
       ok: Array.isArray(gate.validation?.errors) && gate.validation.errors.length === 0,
       value: Array.isArray(gate.validation?.errors) ? gate.validation.errors.length : null
-    },
-    {
-      name: "executor_not_implemented",
-      ok: gate.executor?.executorImplemented === false,
-      value: gate.executor?.executorImplemented
-    },
-    {
-      name: "real_execution_not_enabled",
-      ok: gate.executor?.realExecutionEnabled === false,
-      value: gate.executor?.realExecutionEnabled
-    },
-    {
-      name: "cannot_proceed_to_real_executor_yet",
-      ok: gate.executor?.canProceedToRealExecutor === false,
-      value: gate.executor?.canProceedToRealExecutor
     },
     {
       name: "cannot_execute_without_approval",
@@ -175,6 +186,8 @@ function inspectGate(filePath) {
     proposalId: gate.source?.proposalId ?? null,
     commandId: gate.requestedCommand?.commandId ?? null,
     command: Array.isArray(gate.requestedCommand?.command) ? gate.requestedCommand.command.join(" ") : null,
+    executorImplemented: gate.executor?.executorImplemented,
+    realExecutionEnabled: gate.executor?.realExecutionEnabled,
     canProceedToRealExecutor: gate.executor?.canProceedToRealExecutor,
     error: null,
     checks
@@ -213,6 +226,8 @@ function main() {
     console.log("Proposal ID:", gate.proposalId);
     console.log("Command ID:", gate.commandId);
     console.log("Command:", gate.command);
+    console.log("Executor implementado:", gate.executorImplemented);
+    console.log("Ejecución real habilitada:", gate.realExecutionEnabled);
     console.log("Puede pasar al ejecutor real:", gate.canProceedToRealExecutor);
 
     if (gate.error) {
