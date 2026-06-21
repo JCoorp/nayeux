@@ -282,7 +282,21 @@ function main() {
 
   const executableToRun = process.platform === "win32" && executable === "npm" ? "npm.cmd" : executable;
 
-  const result = spawnSync(executableToRun, args, {
+  let executableToRun = executable;
+  let argsToRun = args;
+
+  if (executable === "npm") {
+    const npmCli = process.env.npm_execpath;
+
+    if (!npmCli) {
+      throw new Error("No se encontró process.env.npm_execpath para ejecutar npm sin shell.");
+    }
+
+    executableToRun = process.execPath;
+    argsToRun = [npmCli, ...args];
+  }
+
+  const result = spawnSync(executableToRun, argsToRun, {
     cwd,
     encoding: "utf8",
     shell: false,
@@ -341,6 +355,10 @@ function main() {
     console.error(result.stderr);
   }
 
+  if (result.error) {
+    console.error("Process error:", result.error.message);
+  }
+
   console.log("");
   console.log("OpenClaw Controlled Executor — Resultado");
   console.log("----------------------------------------");
@@ -355,4 +373,5 @@ function main() {
 }
 
 main();
+
 
