@@ -32,7 +32,8 @@
     "openclaw-execution-policy-status": "node src/openclawExecutionPolicyStatus.js",
     "openclaw-final-executor-gate": "node src/openclawFinalExecutorGate.js",
     "openclaw-final-executor-gates-status": "node src/openclawFinalExecutorGatesStatus.js",
-    "openclaw-controlled-executor": "node src/openclawControlledExecutor.js"
+    "openclaw-controlled-executor": "node src/openclawControlledExecutor.js",
+    "openclaw-controlled-executions-status": "node src/openclawControlledExecutionsStatus.js"
   },
   "author": "JC",
   "license": "PRIVATE"
