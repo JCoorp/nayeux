@@ -17,18 +17,21 @@
     "nayeVault": "F:/NayeVault"
   },
   "integration": {
-    "status": "gateway_local_running_with_secretref",
+    "status": "gateway_service_running_with_secretref",
     "gatewayConfigured": true,
     "channelsConfigured": false,
     "modelsConfigured": false,
     "nayeControlledExecution": true,
     "gatewayReachable": true,
     "gatewayAuthConfigured": true,
-    "serviceInstalled": false,
+    "serviceInstalled": true,
     "lastKnownGateway": "ws://127.0.0.1:18789",
     "lastSecurityAudit": "0 critical after token auth and SecretRef migration",
     "gatewayAuthStorage": "SecretRef/env",
-    "lastSecretsAudit": "clean: plaintext=0, unresolved=0, shadowed=0, legacy=0"
+    "lastSecretsAudit": "clean: plaintext=0, unresolved=0, shadowed=0, legacy=0",
+    "serviceType": "Windows Scheduled Task",
+    "lastServiceStatus": "registered_and_running_on_loopback",
+    "lastGatewayCapability": "admin-capable"
   },
   "safety": {
     "doNotRestoreLegacyBackup": true,

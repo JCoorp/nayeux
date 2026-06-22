@@ -123,7 +123,7 @@ function main() {
       value: config.runtime?.nayeVault
     },
     {
-      name: "status_valid_installed_runtime_state", ok: ["installed_not_onboarded", "gateway_local_running_with_token", "gateway_local_running_with_secretref"].includes(config.integration?.status), value: config.integration?.status
+      name: "status_valid_installed_runtime_state", ok: ["installed_not_onboarded", "gateway_local_running_with_token", "gateway_local_running_with_secretref", "gateway_service_running_with_secretref"].includes(config.integration?.status), value: config.integration?.status
     },
     {
       name: "gateway_configuration_state_valid", ok: typeof config.integration?.gatewayConfigured === "boolean", value: config.integration?.gatewayConfigured
@@ -203,4 +203,5 @@ function main() {
 }
 
 main();
+
 
