@@ -12,23 +12,31 @@ function ensureDirs() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
 }
 
+function quoteArg(value) {
+  const text = String(value);
+  if (/^[a-zA-Z0-9_./:=-]+$/.test(text)) return text;
+  return `"${text.replace(/"/g, '\\"')}"`;
+}
+
 function run(command, args) {
-  const result = spawnSync(command, args, {
+  const commandLine = [command, ...args].map(quoteArg).join(" ");
+
+  const result = spawnSync(commandLine, {
     cwd: process.cwd(),
     encoding: "utf8",
-    shell: false,
-    windowsHide: true
+    shell: true,
+    windowsHide: true,
+    env: process.env
   });
 
   return {
-    command: [command, ...args].join(" "),
+    command: commandLine,
     exitCode: result.status,
     stdout: result.stdout || "",
     stderr: result.stderr || "",
     error: result.error ? result.error.message : null
   };
 }
-
 function checkTcp(host, port, timeoutMs = 3000) {
   return new Promise((resolve) => {
     const socket = new net.Socket();
@@ -154,3 +162,4 @@ main().catch((error) => {
   console.error("Error en Naye OpenClaw Bridge Status:", error.message);
   process.exit(1);
 });
+
