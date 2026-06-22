@@ -38,7 +38,8 @@
     "node-onboarding": "node src/nayeNodeOnboarding.cjs",
     "assistance-session": "node src/nayeAssistanceSession.cjs start",
     "assistance-close": "node src/nayeAssistanceSession.cjs close",
-    "assistance-list": "node src/nayeAssistanceSession.cjs list"
+    "assistance-list": "node src/nayeAssistanceSession.cjs list",
+    "openclaw-bridge-status": "node src/nayeOpenClawBridge.cjs"
   },
   "author": "JC",
   "license": "PRIVATE"
