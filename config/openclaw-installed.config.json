@@ -1,4 +1,4 @@
-﻿{
+{
   "system": "Naye Core",
   "component": "OpenClaw Installed Runtime",
   "version": "0.1.0",
@@ -17,11 +17,18 @@
     "nayeVault": "F:/NayeVault"
   },
   "integration": {
-    "status": "installed_not_onboarded",
-    "gatewayConfigured": false,
+    "status": "gateway_local_running_with_secretref",
+    "gatewayConfigured": true,
     "channelsConfigured": false,
     "modelsConfigured": false,
-    "nayeControlledExecution": true
+    "nayeControlledExecution": true,
+    "gatewayReachable": true,
+    "gatewayAuthConfigured": true,
+    "serviceInstalled": false,
+    "lastKnownGateway": "ws://127.0.0.1:18789",
+    "lastSecurityAudit": "0 critical after token auth and SecretRef migration",
+    "gatewayAuthStorage": "SecretRef/env",
+    "lastSecretsAudit": "clean: plaintext=0, unresolved=0, shadowed=0, legacy=0"
   },
   "safety": {
     "doNotRestoreLegacyBackup": true,
@@ -31,7 +38,10 @@
     "doNotImportWhatsAppData": true,
     "requireNayeApprovalForOnboarding": true,
     "requireNayeApprovalForChannels": true,
-    "requireNayeApprovalForSecrets": true
+    "requireNayeApprovalForSecrets": true,
+    "keepGatewayLoopbackOnly": true,
+    "doNotExposeDashboardExternally": true,
+    "gatewayTokenStoredAsPlaintext": false
   },
   "allowedNextCommands": [
     "openclaw doctor",
