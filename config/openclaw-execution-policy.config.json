@@ -337,6 +337,53 @@
         "audit"
       ],
       "description": "Run OpenClaw security audit without deep channel access"
+    },
+    {
+      "commandId": "openclaw_secrets_help",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "secrets",
+        "--help"
+      ],
+      "description": "Inspect OpenClaw secrets commands safely"
+    },
+    {
+      "commandId": "openclaw_secrets_audit_check",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "secrets",
+        "audit",
+        "--check"
+      ],
+      "description": "Check whether OpenClaw secrets are safely referenced"
+    },
+    {
+      "commandId": "openclaw_security_audit_deep",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "security",
+        "audit",
+        "--deep"
+      ],
+      "description": "Run deeper OpenClaw security audit"
     }
   ],
   "destructiveActions": {
