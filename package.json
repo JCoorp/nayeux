@@ -35,7 +35,10 @@
     "openclaw-controlled-executor": "node src/openclawControlledExecutor.js",
     "openclaw-controlled-executions-status": "node src/openclawControlledExecutionsStatus.js",
     "openclaw-installed-status": "node src/openclawInstalledStatus.js",
-    "node-onboarding": "node src/nayeNodeOnboarding.cjs"
+    "node-onboarding": "node src/nayeNodeOnboarding.cjs",
+    "assistance-session": "node src/nayeAssistanceSession.cjs start",
+    "assistance-close": "node src/nayeAssistanceSession.cjs close",
+    "assistance-list": "node src/nayeAssistanceSession.cjs list"
   },
   "author": "JC",
   "license": "PRIVATE"
