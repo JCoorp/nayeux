@@ -384,6 +384,104 @@
         "--deep"
       ],
       "description": "Run deeper OpenClaw security audit"
+    },
+    {
+      "commandId": "openclaw_secrets_configure_help",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "secrets",
+        "configure",
+        "--help"
+      ],
+      "description": "Inspect OpenClaw secrets configure options"
+    },
+    {
+      "commandId": "openclaw_secrets_apply_help",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "secrets",
+        "apply",
+        "--help"
+      ],
+      "description": "Inspect OpenClaw secrets apply options"
+    },
+    {
+      "commandId": "openclaw_secrets_audit_help",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "secrets",
+        "audit",
+        "--help"
+      ],
+      "description": "Inspect OpenClaw secrets audit options"
+    },
+    {
+      "commandId": "openclaw_secrets_apply_dry_run_gateway_token",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "secrets",
+        "apply",
+        "--dry-run",
+        "--from",
+        "F:/NayeVault/openclaw/fresh/runtime/secrets-plans/gateway-auth-token-plan.json"
+      ],
+      "description": "Dry-run apply gateway auth token SecretRef plan"
+    },
+    {
+      "commandId": "openclaw_secrets_apply_gateway_token",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "secrets",
+        "apply",
+        "--from",
+        "F:/NayeVault/openclaw/fresh/runtime/secrets-plans/gateway-auth-token-plan.json"
+      ],
+      "description": "Apply gateway auth token SecretRef plan"
+    },
+    {
+      "commandId": "openclaw_secrets_reload",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "secrets",
+        "reload"
+      ],
+      "description": "Reload OpenClaw secrets after SecretRef changes"
     }
   ],
   "destructiveActions": {
