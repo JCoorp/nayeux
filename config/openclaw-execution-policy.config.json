@@ -482,6 +482,165 @@
         "reload"
       ],
       "description": "Reload OpenClaw secrets after SecretRef changes"
+    },
+    {
+      "commandId": "openclaw_gateway_install_help",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "gateway",
+        "install",
+        "--help"
+      ],
+      "description": "Show OpenClaw gateway install help"
+    },
+    {
+      "commandId": "openclaw_gateway_status_help",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "gateway",
+        "status",
+        "--help"
+      ],
+      "description": "Show OpenClaw gateway status help"
+    },
+    {
+      "commandId": "openclaw_gateway_start_help",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "gateway",
+        "start",
+        "--help"
+      ],
+      "description": "Show OpenClaw gateway start help"
+    },
+    {
+      "commandId": "openclaw_gateway_stop_help",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "gateway",
+        "stop",
+        "--help"
+      ],
+      "description": "Show OpenClaw gateway stop help"
+    },
+    {
+      "commandId": "openclaw_gateway_restart_help",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "gateway",
+        "restart",
+        "--help"
+      ],
+      "description": "Show OpenClaw gateway restart help"
+    },
+    {
+      "commandId": "openclaw_gateway_install_service",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "gateway",
+        "install",
+        "--port",
+        "18789",
+        "--runtime",
+        "node"
+      ],
+      "description": "Install OpenClaw gateway service using config and SecretRef/env token"
+    },
+    {
+      "commandId": "openclaw_gateway_start_service",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "gateway",
+        "start"
+      ],
+      "description": "Start OpenClaw gateway service"
+    },
+    {
+      "commandId": "openclaw_gateway_stop_service",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "gateway",
+        "stop"
+      ],
+      "description": "Stop OpenClaw gateway service"
+    },
+    {
+      "commandId": "openclaw_gateway_restart_service",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "gateway",
+        "restart"
+      ],
+      "description": "Restart OpenClaw gateway service"
+    },
+    {
+      "commandId": "openclaw_gateway_status_service",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "gateway",
+        "status"
+      ],
+      "description": "Show OpenClaw gateway service status"
     }
   ],
   "destructiveActions": {
