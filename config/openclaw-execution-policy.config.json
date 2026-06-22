@@ -292,6 +292,51 @@
         "false"
       ],
       "description": "Disable OpenAI semantic memory search until a provider is intentionally configured"
+    },
+    {
+      "commandId": "openclaw_gateway_help",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "gateway",
+        "--help"
+      ],
+      "description": "Inspect OpenClaw gateway commands safely"
+    },
+    {
+      "commandId": "openclaw_gateway_probe",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "gateway",
+        "probe"
+      ],
+      "description": "Probe local OpenClaw gateway reachability"
+    },
+    {
+      "commandId": "openclaw_security_audit",
+      "executable": "openclaw",
+      "cwd": "F:/NayeVault/naye-core",
+      "requiresApproval": true,
+      "requiresAuditLog": true,
+      "controlled": true,
+      "networkAllowed": false,
+      "externalProvidersAllowed": false,
+      "allowedExactArgs": [
+        "security",
+        "audit"
+      ],
+      "description": "Run OpenClaw security audit without deep channel access"
     }
   ],
   "destructiveActions": {
