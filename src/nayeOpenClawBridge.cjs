@@ -1,4 +1,4 @@
-﻿const { spawnSync } = require("child_process");
+﻿const { spawn, spawnSync } = require("child_process");
 const fs = require("fs");
 const net = require("net");
 const path = require("path");
@@ -18,25 +18,82 @@ function quoteArg(value) {
   return `"${text.replace(/"/g, '\\"')}"`;
 }
 
-function run(command, args) {
-  const commandLine = [command, ...args].map(quoteArg).join(" ");
-
-  const result = spawnSync(commandLine, {
-    cwd: process.cwd(),
-    encoding: "utf8",
-    shell: true,
-    windowsHide: true,
-    env: process.env
-  });
-
-  return {
-    command: commandLine,
-    exitCode: result.status,
-    stdout: result.stdout || "",
-    stderr: result.stderr || "",
-    error: result.error ? result.error.message : null
-  };
+function killTree(pid) {
+  try {
+    spawnSync("taskkill.exe", ["/PID", String(pid), "/T", "/F"], {
+      encoding: "utf8",
+      windowsHide: true
+    });
+  } catch {}
 }
+
+function runCli(command, args, timeoutMs = 8000) {
+  return new Promise((resolve) => {
+    const commandLine = [command, ...args].map(quoteArg).join(" ");
+
+    const child = spawn("cmd.exe", ["/d", "/s", "/c", commandLine], {
+      cwd: process.cwd(),
+      windowsHide: true,
+      shell: false,
+      env: process.env
+    });
+
+    let stdout = "";
+    let stderr = "";
+    let finished = false;
+
+    const timer = setTimeout(() => {
+      if (finished) return;
+      finished = true;
+      killTree(child.pid);
+      resolve({
+        command: commandLine,
+        exitCode: null,
+        stdout,
+        stderr,
+        error: "timeout",
+        timedOut: true
+      });
+    }, timeoutMs);
+
+    child.stdout.on("data", (data) => {
+      stdout += data.toString();
+    });
+
+    child.stderr.on("data", (data) => {
+      stderr += data.toString();
+    });
+
+    child.on("error", (error) => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      resolve({
+        command: commandLine,
+        exitCode: null,
+        stdout,
+        stderr,
+        error: error.message,
+        timedOut: false
+      });
+    });
+
+    child.on("close", (code) => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      resolve({
+        command: commandLine,
+        exitCode: code,
+        stdout,
+        stderr,
+        error: null,
+        timedOut: false
+      });
+    });
+  });
+}
+
 function checkTcp(host, port, timeoutMs = 3000) {
   return new Promise((resolve) => {
     const socket = new net.Socket();
@@ -50,6 +107,7 @@ function checkTcp(host, port, timeoutMs = 3000) {
     }
 
     socket.setTimeout(timeoutMs);
+
     socket.once("connect", () => {
       finish({
         reachable: true,
@@ -84,16 +142,34 @@ function checkTcp(host, port, timeoutMs = 3000) {
 function summarize(statusOutput, probeOutput, tcpCheck) {
   const combined = `${statusOutput.stdout}\n${probeOutput.stdout}\n${statusOutput.stderr}\n${probeOutput.stderr}`;
 
+  const gatewayReachableByProbe =
+    combined.includes("Connectivity probe: ok") ||
+    combined.includes("Reachable: yes") ||
+    combined.includes("Connect: ok");
+
+  const capabilityAdminCapable =
+    combined.includes("admin-capable");
+
+  const gatewayListeningTextDetected =
+    combined.includes("Listening: 127.0.0.1:18789");
+
   return {
     gatewayConfigured: combined.includes("Service: Scheduled Task") || combined.includes("Gateway:"),
-    gatewayReachableByProbe: combined.includes("Connectivity probe: ok") || combined.includes("Reachable: yes"),
-    gatewayListeningTextDetected: combined.includes("Listening: 127.0.0.1:18789"),
-    capabilityAdminCapable: combined.includes("admin-capable"),
+    gatewayReachableByProbe,
+    gatewayListeningTextDetected,
+    capabilityAdminCapable,
     tokenPresentInCurrentEnv: Boolean(process.env.OPENCLAW_GATEWAY_AUTH_TOKEN),
     tcpReachable: tcpCheck.reachable,
+    cliStatusTimedOut: statusOutput.timedOut === true,
+    cliProbeTimedOut: probeOutput.timedOut === true,
     status: (
-      (combined.includes("Connectivity probe: ok") || combined.includes("Reachable: yes") || tcpCheck.reachable) &&
-      combined.includes("admin-capable")
+      tcpCheck.reachable &&
+      Boolean(process.env.OPENCLAW_GATEWAY_AUTH_TOKEN) &&
+      (
+        capabilityAdminCapable ||
+        gatewayReachableByProbe ||
+        gatewayListeningTextDetected
+      )
     ) ? "ok" : "review"
   };
 }
@@ -101,9 +177,9 @@ function summarize(statusOutput, probeOutput, tcpCheck) {
 async function main() {
   ensureDirs();
 
-  const statusOutput = run("openclaw", ["gateway", "status"]);
-  const probeOutput = run("openclaw", ["gateway", "probe"]);
   const tcpCheck = await checkTcp(GATEWAY_HOST, GATEWAY_PORT);
+  const statusOutput = await runCli("openclaw", ["gateway", "status"], 8000);
+  const probeOutput = await runCli("openclaw", ["gateway", "probe"], 8000);
 
   const now = new Date().toISOString();
   const summary = summarize(statusOutput, probeOutput, tcpCheck);
@@ -111,7 +187,7 @@ async function main() {
   const report = {
     system: "Naye Core",
     component: "Naye OpenClaw Bridge Status",
-    version: "0.1.0",
+    version: "0.2.0",
     checkedAt: now,
     gateway: {
       host: GATEWAY_HOST,
@@ -122,9 +198,9 @@ async function main() {
     },
     summary,
     checks: {
+      tcpCheck,
       openclawGatewayStatus: statusOutput,
-      openclawGatewayProbe: probeOutput,
-      tcpCheck
+      openclawGatewayProbe: probeOutput
     },
     security: {
       doNotExposeGatewayExternally: true,
@@ -150,6 +226,8 @@ async function main() {
   console.log(`TCP reachable: ${summary.tcpReachable}`);
   console.log(`Capability admin-capable: ${summary.capabilityAdminCapable}`);
   console.log(`Token env present: ${summary.tokenPresentInCurrentEnv}`);
+  console.log(`CLI status timed out: ${summary.cliStatusTimedOut}`);
+  console.log(`CLI probe timed out: ${summary.cliProbeTimedOut}`);
   console.log(`Estado: ${summary.status}`);
   console.log(`Reporte: ${reportPath}`);
 
@@ -162,4 +240,3 @@ main().catch((error) => {
   console.error("Error en Naye OpenClaw Bridge Status:", error.message);
   process.exit(1);
 });
-
