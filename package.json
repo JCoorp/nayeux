@@ -1,0 +1,30 @@
+{
+  "name": "naye-desktop-ux",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Naye local desktop UX bridge. Desktop interface for Naye Core API, without direct OpenClaw access.",
+  "main": "electron/main.cjs",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k \"npm:dev:renderer\" \"npm:dev:electron\"",
+    "dev:renderer": "vite --host 127.0.0.1 --port 5173 --strictPort",
+    "dev:electron": "wait-on tcp:127.0.0.1:5173 && electron .",
+    "build": "tsc && vite build",
+    "start": "electron .",
+    "preview": "vite preview --host 127.0.0.1 --port 5173 --strictPort"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "4.2.1",
+    "vite": "4.5.3",
+    "typescript": "5.4.5",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "18.2.66",
+    "@types/react-dom": "18.2.22",
+    "concurrently": "8.2.2",
+    "electron": "31.7.7",
+    "wait-on": "7.2.0"
+  }
+}
