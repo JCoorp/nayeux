@@ -36,3 +36,6 @@ Thumbs.db
 
 src/*.backup-*.cjs
 *.backup-*.cjs
+
+src/*.backup-*.cjs
+*.backup-*.cjs
