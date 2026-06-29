@@ -15,16 +15,16 @@
   },
   "dependencies": {
     "@vitejs/plugin-react": "4.2.1",
-    "vite": "4.5.3",
-    "typescript": "5.4.5",
     "react": "18.2.0",
-    "react-dom": "18.2.0"
+    "react-dom": "18.2.0",
+    "typescript": "5.4.5",
+    "vite": "4.5.3"
   },
   "devDependencies": {
     "@types/react": "18.2.66",
     "@types/react-dom": "18.2.22",
-    "concurrently": "8.2.2",
-    "electron": "31.7.7",
+    "concurrently": "^8.2.2",
+    "electron": "^31.7.7",
     "wait-on": "7.2.0"
   }
 }
