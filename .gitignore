@@ -39,3 +39,5 @@ src/*.backup-*.cjs
 
 src/*.backup-*.cjs
 *.backup-*.cjs
+
+naye-ux/
