@@ -470,6 +470,469 @@ async function handleChat(req, res) {
   });
 }
 
+
+function getDeviceCapabilities() {
+  return {
+    ok: true,
+    component: "Naye Device Capabilities",
+    version: "0.1.0",
+    policy: {
+      directPcControlEnabled: false,
+      screenCaptureRequiresExplicitConfirmation: true,
+      mouseControlEnabled: false,
+      keyboardControlEnabled: false,
+      commandExecutionEnabled: false
+    },
+    capabilities: {
+      chat: true,
+      openclawBridge: true,
+      webSearch: true,
+      webFetch: true,
+      screenCapture: true,
+      screenCaptureOnce: true,
+      mouseControl: false,
+      keyboardControl: false,
+      fileRead: false,
+      fileWrite: false,
+      commandExecute: false
+    }
+  };
+}
+
+
+function readDeviceJsonBody(req) {
+  return new Promise((resolve, reject) => {
+    let raw = "";
+
+    req.on("data", (chunk) => {
+      raw += chunk;
+      if (raw.length > 1024 * 1024) {
+        reject(new Error("Request body too large"));
+        req.destroy();
+      }
+    });
+
+    req.on("end", () => {
+      if (!raw.trim()) {
+        resolve({});
+        return;
+      }
+
+      try {
+        resolve(JSON.parse(raw));
+      } catch {
+        reject(new Error("Invalid JSON body"));
+      }
+    });
+
+    req.on("error", reject);
+  });
+}
+
+function ensureNayeRuntimeDir(...parts) {
+  const fs = require("fs");
+  const path = require("path");
+  const dir = path.join("F:\\NayeVault", "runtime", ...parts);
+  fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+function writeDeviceAuditEvent(event) {
+  const fs = require("fs");
+  const path = require("path");
+  const auditDir = ensureNayeRuntimeDir("audit");
+  const auditFile = path.join(auditDir, "naye-device-actions.jsonl");
+
+  const record = {
+    ...event,
+    writtenAt: new Date().toISOString()
+  };
+
+  fs.appendFileSync(auditFile, JSON.stringify(record) + "\n", "utf8");
+  return auditFile;
+}
+
+function captureScreenOnce() {
+  return new Promise((resolve, reject) => {
+    const fs = require("fs");
+    const path = require("path");
+    const execFile = require("child_process").execFile;
+    const capturesDir = ensureNayeRuntimeDir("screen-captures");
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const outputPath = path.join(capturesDir, "screen-" + timestamp + ".png");
+
+    const psScript = [
+      "Add-Type -AssemblyName System.Windows.Forms",
+      "Add-Type -AssemblyName System.Drawing",
+      "$outputPath = $env:NAYE_SCREEN_CAPTURE_PATH",
+      "$bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds",
+      "if ($null -eq $bounds) { throw 'No primary screen detected' }",
+      "$bitmap = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height",
+      "$graphics = [System.Drawing.Graphics]::FromImage($bitmap)",
+      "try {",
+      "  $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)",
+      "  $bitmap.Save($outputPath, [System.Drawing.Imaging.ImageFormat]::Png)",
+      "} finally {",
+      "  $graphics.Dispose()",
+      "  $bitmap.Dispose()",
+      "}"
+    ].join("\n");
+
+    execFile(
+      "powershell.exe",
+      ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", psScript],
+      {
+        windowsHide: true,
+        timeout: 15000,
+        env: {
+          ...process.env,
+          NAYE_SCREEN_CAPTURE_PATH: outputPath
+        }
+      },
+      (error, stdout, stderr) => {
+        if (error) {
+          reject(new Error("Screen capture failed: " + error.message + (stderr ? " | " + stderr : "")));
+          return;
+        }
+
+        if (!fs.existsSync(outputPath)) {
+          reject(new Error("Screen capture did not create output file."));
+          return;
+        }
+
+        resolve({
+          outputPath,
+          stdout,
+          stderr
+        });
+      }
+    );
+  });
+}
+
+async function handleScreenCaptureOnce(req, res) {
+  let body;
+
+  try {
+    body = await readDeviceJsonBody(req);
+  } catch (error) {
+    sendJson(res, 400, {
+      ok: false,
+      error: "invalid_request_body",
+      message: error.message
+    });
+    return;
+  }
+
+  if (body.confirm !== "CAPTURE_ONCE_APPROVED") {
+    writeDeviceAuditEvent({
+      type: "screen_capture_denied",
+      ok: false,
+      reason: body.reason || "Missing explicit confirmation",
+      requiredConfirm: "CAPTURE_ONCE_APPROVED",
+      timestamp: new Date().toISOString()
+    });
+
+    sendJson(res, 403, {
+      ok: false,
+      error: "explicit_confirmation_required",
+      message: "Screen capture requires confirm: CAPTURE_ONCE_APPROVED",
+      requiredConfirm: "CAPTURE_ONCE_APPROVED"
+    });
+    return;
+  }
+
+  try {
+    const result = await captureScreenOnce();
+
+    const auditFile = writeDeviceAuditEvent({
+      type: "screen_capture_once",
+      ok: true,
+      scope: "screen-capture-once",
+      reason: body.reason || "Manual user-approved screen capture",
+      savedTo: result.outputPath,
+      timestamp: new Date().toISOString()
+    });
+
+    sendJson(res, 200, {
+      ok: true,
+      component: "Naye Screen Capture",
+      mode: "capture-once",
+      savedTo: result.outputPath,
+      auditFile,
+      timestamp: new Date().toISOString(),
+      warning: "Capture created after explicit local confirmation. Continuous screen capture is not enabled."
+    });
+  } catch (error) {
+    const auditFile = writeDeviceAuditEvent({
+      type: "screen_capture_failed",
+      ok: false,
+      reason: body.reason || "Manual user-approved screen capture",
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+
+    sendJson(res, 500, {
+      ok: false,
+      error: "screen_capture_failed",
+      message: error.message,
+      auditFile
+    });
+  }
+}
+
+
+function getNayePrivacyPolicy() {
+  return {
+    ok: true,
+    component: "Naye Privacy Policy",
+    version: "0.1.0",
+    mode: "local_first_cloud_optional",
+    defaultRoute: "local_only",
+    sensitiveDataCloudBlocked: true,
+    cloudRequiresExplicitApproval: true,
+    rules: {
+      screenToCloudBlocked: true,
+      mouseKeyboardToCloudBlocked: true,
+      filesToCloudBlocked: true,
+      databaseToCloudBlocked: true,
+      internalChatToCloudBlocked: true,
+      credentialsToCloudBlocked: true,
+      browserProfilesToCloudBlocked: true,
+      cookiesToCloudBlocked: true,
+      tokensToCloudBlocked: true
+    },
+    localOnlyRequestTypes: [
+      "screen_analysis",
+      "screen_live",
+      "mouse_control",
+      "keyboard_control",
+      "computer_control",
+      "file_read",
+      "file_write",
+      "database_query",
+      "internal_chat",
+      "private_data",
+      "credential_access",
+      "browser_profile_access"
+    ],
+    cloudOptionalRequestTypes: [
+      "image_generation",
+      "presentation_generation",
+      "document_generation",
+      "heavy_creative_task",
+      "non_sensitive_research"
+    ],
+    cloudUseConditions: [
+      "The request must not contain private/internal data.",
+      "The request must not include screen, mouse, keyboard, files, database content, credentials, cookies, tokens, or local paths.",
+      "The user must explicitly approve cloud use for that single task."
+    ]
+  };
+}
+
+function getNayeModelRouterStatus() {
+  return {
+    ok: true,
+    component: "Naye Model Router",
+    version: "0.1.0",
+    policyMode: "local_first_cloud_optional",
+    enforcement: {
+      routeCheckAvailable: true,
+      chatEnforcementEnabled: false,
+      note: "Route policy exists, but /api/chat is not yet fully gated. Do not send private data to cloud chat until enforcement is enabled."
+    },
+    localModel: {
+      configured: false,
+      provider: null,
+      textModel: null,
+      visionModel: null,
+      status: "pending_configuration"
+    },
+    cloudModel: {
+      available: true,
+      provider: "openclaw/openai",
+      status: "available_but_policy_gated",
+      requiresExplicitApproval: true
+    },
+    targetArchitecture: {
+      privateChat: "local_only",
+      databaseQueries: "local_only",
+      screenMouseKeyboard: "local_only",
+      files: "local_only",
+      cloud: "optional_for_non_sensitive_heavy_tasks_only"
+    }
+  };
+}
+
+function readRouterJsonBody(req) {
+  return new Promise((resolve, reject) => {
+    let raw = "";
+
+    req.on("data", (chunk) => {
+      raw += chunk;
+      if (raw.length > 1024 * 1024) {
+        reject(new Error("Request body too large"));
+        req.destroy();
+      }
+    });
+
+    req.on("end", () => {
+      if (!raw.trim()) {
+        resolve({});
+        return;
+      }
+
+      try {
+        resolve(JSON.parse(raw));
+      } catch {
+        reject(new Error("Invalid JSON body"));
+      }
+    });
+
+    req.on("error", reject);
+  });
+}
+
+function classifyNayeRoute(body) {
+  const requestType = String(body.requestType || "").toLowerCase().trim();
+  const message = String(body.message || body.prompt || body.text || "").toLowerCase();
+  const combined = (requestType + " " + message).trim();
+
+  const localOnlyTypes = new Set([
+    "screen_analysis",
+    "screen_live",
+    "mouse_control",
+    "keyboard_control",
+    "computer_control",
+    "file_read",
+    "file_write",
+    "database_query",
+    "internal_chat",
+    "private_data",
+    "credential_access",
+    "browser_profile_access"
+  ]);
+
+  const localOnlyKeywords = [
+    "pantalla",
+    "screen",
+    "captura",
+    "mouse",
+    "raton",
+    "teclado",
+    "keyboard",
+    "archivo",
+    "file",
+    "base de datos",
+    "database",
+    "bd",
+    "sql",
+    "interno",
+    "privado",
+    "confidencial",
+    "cliente",
+    "clientes",
+    "empleado",
+    "empleados",
+    "inventario",
+    "pedido",
+    "pedidos",
+    "orden",
+    "ordenes",
+    "contraseña",
+    "password",
+    "token",
+    "cookie",
+    "credencial",
+    "credenciales",
+    "ruta local",
+    "c:\\",
+    "f:\\"
+  ];
+
+  const cloudOptionalKeywords = [
+    "imagen",
+    "image",
+    "presentacion",
+    "presentación",
+    "powerpoint",
+    "pptx",
+    "diapositiva",
+    "diapositivas",
+    "diseño",
+    "design",
+    "render",
+    "crear desde cero",
+    "documento completo",
+    "trabajo pesado"
+  ];
+
+  const hasLocalOnlyType = localOnlyTypes.has(requestType);
+  const hasLocalOnlyKeyword = localOnlyKeywords.some((keyword) => combined.includes(keyword));
+  const hasCloudOptionalKeyword = cloudOptionalKeywords.some((keyword) => combined.includes(keyword));
+
+  if (hasLocalOnlyType || hasLocalOnlyKeyword) {
+    return {
+      requestType: requestType || "detected_sensitive_or_internal_request",
+      allowedRoute: "local_only",
+      cloudAllowed: false,
+      requiresExplicitApproval: false,
+      reason: "The request may involve internal/private data, screen, mouse, keyboard, files, database, credentials, or local machine context. Cloud use is blocked."
+    };
+  }
+
+  if (hasCloudOptionalKeyword) {
+    return {
+      requestType: requestType || "detected_heavy_non_sensitive_task",
+      allowedRoute: "local_preferred_cloud_optional",
+      cloudAllowed: true,
+      requiresExplicitApproval: true,
+      reason: "The request looks like a heavy creative/generation task. Cloud may be allowed only if the user explicitly approves and the content is non-sensitive."
+    };
+  }
+
+  return {
+    requestType: requestType || "general_chat",
+    allowedRoute: "local_only",
+    cloudAllowed: false,
+    requiresExplicitApproval: false,
+    reason: "Default route is local_only until a local model and explicit cloud approval policy are fully configured."
+  };
+}
+
+async function handleModelRouterRouteCheck(req, res) {
+  let body;
+
+  try {
+    body = await readRouterJsonBody(req);
+  } catch (error) {
+    sendJson(res, 400, {
+      ok: false,
+      error: "invalid_request_body",
+      message: error.message
+    });
+    return;
+  }
+
+  const route = classifyNayeRoute(body);
+
+  sendJson(res, 200, {
+    ok: true,
+    component: "Naye Model Router Route Check",
+    input: {
+      requestType: body.requestType || null,
+      hasMessage: Boolean(body.message || body.prompt || body.text)
+    },
+    route,
+    policy: {
+      defaultRoute: "local_only",
+      sensitiveDataCloudBlocked: true,
+      cloudRequiresExplicitApproval: true
+    }
+  });
+}
+
 async function handleRequest(req, res) {
   const url = new URL(req.url, `http://${HOST}:${PORT}`);
 
@@ -497,10 +960,53 @@ async function handleRequest(req, res) {
     return;
   }
 
+  if (url.pathname === "/api/screen/capture-once") {
+    if (req.method !== "POST") {
+      sendJson(res, 405, {
+        ok: false,
+        error: "method_not_allowed",
+        allowedMethods: ["POST"]
+      });
+      return;
+    }
+
+    await handleScreenCaptureOnce(req, res);
+    return;
+  }
+
+  if (url.pathname === "/api/model-router/route-check") {
+    if (req.method !== "POST") {
+      sendJson(res, 405, {
+        ok: false,
+        error: "method_not_allowed",
+        allowedMethods: ["POST"]
+      });
+      return;
+    }
+
+    await handleModelRouterRouteCheck(req, res);
+    return;
+  }
+
   if (req.method !== "GET") {
     sendJson(res, 405, {
       error: "method_not_allowed"
     });
+    return;
+  }
+
+  if (url.pathname === "/api/capabilities") {
+    sendJson(res, 200, getDeviceCapabilities());
+    return;
+  }
+
+  if (url.pathname === "/api/privacy/policy") {
+    sendJson(res, 200, getNayePrivacyPolicy());
+    return;
+  }
+
+  if (url.pathname === "/api/model-router/status") {
+    sendJson(res, 200, getNayeModelRouterStatus());
     return;
   }
 
@@ -554,11 +1060,16 @@ async function handleRequest(req, res) {
     error: "not_found",
     availableEndpoints: [
       "GET /api/status",
+      "GET /api/capabilities",
+      "GET /api/privacy/policy",
+      "GET /api/model-router/status",
       "GET /api/openclaw/status",
       "GET /api/openclaw/config-summary",
       "GET /api/node/profile",
       "GET /api/sessions/active",
-      "POST /api/chat"
+      "POST /api/chat",
+      "POST /api/model-router/route-check",
+      "POST /api/screen/capture-once"
     ]
   });
 }
@@ -581,9 +1092,14 @@ server.listen(PORT, HOST, () => {
   console.log(`Chat mode: OpenClaw assisted via ${OPENCLAW_MODEL} (v0.4.3 tolerant bridge check + Windows spawn fix)`);
   console.log("Endpoints:");
   console.log(`- GET  http://${HOST}:${PORT}/api/status`);
+  console.log(`- GET  http://${HOST}:${PORT}/api/capabilities`);
+  console.log(`- GET  http://${HOST}:${PORT}/api/privacy/policy`);
+  console.log(`- GET  http://${HOST}:${PORT}/api/model-router/status`);
+  console.log(`- POST http://${HOST}:${PORT}/api/model-router/route-check`);
   console.log(`- GET  http://${HOST}:${PORT}/api/openclaw/status`);
   console.log(`- GET  http://${HOST}:${PORT}/api/openclaw/config-summary`);
   console.log(`- GET  http://${HOST}:${PORT}/api/node/profile`);
   console.log(`- GET  http://${HOST}:${PORT}/api/sessions/active`);
   console.log(`- POST http://${HOST}:${PORT}/api/chat`);
+  console.log(`- POST http://${HOST}:${PORT}/api/screen/capture-once`);
 });
