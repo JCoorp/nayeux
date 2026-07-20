@@ -403,6 +403,80 @@ async function handleChat(req, res) {
     return;
   }
 
+  const route = classifyNayeRoute({
+    requestType: payload.requestType,
+    message
+  });
+
+  const cloudApproved = Boolean(
+    payload.approveCloud === true ||
+    payload.cloudApproved === true ||
+    payload.cloudApproval === "CLOUD_TASK_APPROVED"
+  );
+
+  if (route.allowedRoute === "local_only" || route.cloudAllowed === false) {
+    sendJson(res, 403, {
+      ok: false,
+      id,
+      timestamp,
+      source: "naye-core-api",
+      mode: "local-only-policy-block",
+      reply: "Este mensaje fue clasificado como local-only. Por política de privacidad, Naye Core no lo enviará a OpenAI/OpenClaw. Falta conectar el modelo local para responder este tipo de solicitud.",
+      route,
+      policy: {
+        enforced: true,
+        defaultRoute: "local_only",
+        sensitiveDataCloudBlocked: true,
+        cloudRequiresExplicitApproval: true
+      },
+      localModel: {
+        configured: false,
+        status: "pending_configuration",
+        required: true
+      },
+      cloud: {
+        attempted: false,
+        blocked: true
+      },
+      error: {
+        layer: "model-router",
+        code: "local_model_required_cloud_blocked",
+        recoverable: true
+      }
+    });
+    return;
+  }
+
+  if (route.cloudAllowed === true && route.requiresExplicitApproval === true && !cloudApproved) {
+    sendJson(res, 403, {
+      ok: false,
+      id,
+      timestamp,
+      source: "naye-core-api",
+      mode: "cloud-approval-required",
+      reply: "Esta tarea podría usar cloud porque parece pesada/no sensible, pero Naye requiere aprobación explícita para usar OpenAI/OpenClaw en esta solicitud.",
+      route,
+      requiredApproval: {
+        approveCloud: true,
+        cloudApproval: "CLOUD_TASK_APPROVED"
+      },
+      policy: {
+        enforced: true,
+        cloudRequiresExplicitApproval: true
+      },
+      cloud: {
+        attempted: false,
+        blocked: true
+      },
+      error: {
+        layer: "model-router",
+        code: "cloud_approval_required",
+        recoverable: true
+      }
+    });
+    return;
+  }
+
   const bridge = await runBridgeStatus();
   const activeSessions = getActiveSessions();
 
@@ -450,7 +524,15 @@ async function handleChat(req, res) {
     id,
     timestamp,
     source: "naye-core-api",
-    mode: "openclaw-assisted",
+    mode: "cloud-approved-openclaw-assisted",
+    policy: {
+      enforced: true,
+      route,
+      cloudApproval: {
+        approved: true,
+        approvalMode: "single_task"
+      }
+    },
     reply: openclaw.reply,
     bridge: {
       ok: bridge.ok,
@@ -739,8 +821,8 @@ function getNayeModelRouterStatus() {
     policyMode: "local_first_cloud_optional",
     enforcement: {
       routeCheckAvailable: true,
-      chatEnforcementEnabled: false,
-      note: "Route policy exists, but /api/chat is not yet fully gated. Do not send private data to cloud chat until enforcement is enabled."
+      chatEnforcementEnabled: true,
+      note: "Route policy is enforced for /api/chat. Local-only/private requests are blocked from cloud until a local model is configured."
     },
     localModel: {
       configured: false,
