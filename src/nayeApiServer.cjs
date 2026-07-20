@@ -572,6 +572,10 @@ function getDeviceCapabilities() {
       webFetch: true,
       screenCapture: true,
       screenCaptureOnce: true,
+      screenLive: true,
+      screenLatestFrameInMemory: true,
+      screenAnalyzeCurrent: true,
+      screenVisionLocalModel: false,
       mouseControl: false,
       keyboardControl: false,
       fileRead: false,
@@ -761,6 +765,361 @@ async function handleScreenCaptureOnce(req, res) {
       auditFile
     });
   }
+}
+
+
+
+const screenLiveState = {
+  running: false,
+  intervalMs: 2000,
+  timer: null,
+  startedAt: null,
+  stoppedAt: null,
+  frameCount: 0,
+  captureInProgress: false,
+  lastFrame: null,
+  lastError: null
+};
+
+function clampScreenLiveInterval(value) {
+  const parsed = Number(value || 2000);
+  if (!Number.isFinite(parsed)) return 2000;
+  return Math.max(1000, Math.min(10000, Math.floor(parsed)));
+}
+
+function getScreenLivePublicStatus() {
+  return {
+    running: screenLiveState.running,
+    intervalMs: screenLiveState.intervalMs,
+    startedAt: screenLiveState.startedAt,
+    stoppedAt: screenLiveState.stoppedAt,
+    frameCount: screenLiveState.frameCount,
+    captureInProgress: screenLiveState.captureInProgress,
+    hasLatestFrame: Boolean(screenLiveState.lastFrame),
+    latestFrame: screenLiveState.lastFrame
+      ? {
+          timestamp: screenLiveState.lastFrame.timestamp,
+          width: screenLiveState.lastFrame.width,
+          height: screenLiveState.lastFrame.height,
+          mimeType: screenLiveState.lastFrame.mimeType,
+          sizeBytes: screenLiveState.lastFrame.sizeBytes,
+          sequence: screenLiveState.lastFrame.sequence
+        }
+      : null,
+    lastError: screenLiveState.lastError,
+    policy: {
+      localOnly: true,
+      cloudBlocked: true,
+      storesOnlyLatestFrameInMemory: true,
+      savesFramesToDisk: false
+    }
+  };
+}
+
+function captureScreenFrameBase64() {
+  return new Promise((resolve, reject) => {
+    const execFile = require("child_process").execFile;
+
+    const psScript = [
+      "Add-Type -AssemblyName System.Windows.Forms",
+      "Add-Type -AssemblyName System.Drawing",
+      "$bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds",
+      "if ($null -eq $bounds) { throw 'No primary screen detected' }",
+      "$bitmap = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height",
+      "$graphics = [System.Drawing.Graphics]::FromImage($bitmap)",
+      "$memory = New-Object System.IO.MemoryStream",
+      "try {",
+      "  $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)",
+      "  $bitmap.Save($memory, [System.Drawing.Imaging.ImageFormat]::Png)",
+      "  $bytes = $memory.ToArray()",
+      "  $payload = @{",
+      "    width = $bounds.Width",
+      "    height = $bounds.Height",
+      "    base64 = [Convert]::ToBase64String($bytes)",
+      "  }",
+      "  $payload | ConvertTo-Json -Compress",
+      "} finally {",
+      "  $memory.Dispose()",
+      "  $graphics.Dispose()",
+      "  $bitmap.Dispose()",
+      "}"
+    ].join("\n");
+
+    execFile(
+      "powershell.exe",
+      ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", psScript],
+      {
+        windowsHide: true,
+        timeout: 15000,
+        maxBuffer: 50 * 1024 * 1024
+      },
+      (error, stdout, stderr) => {
+        if (error) {
+          reject(new Error("Screen live frame failed: " + error.message + (stderr ? " | " + stderr : "")));
+          return;
+        }
+
+        try {
+          const parsed = JSON.parse(String(stdout || "").trim());
+          if (!parsed.base64) {
+            reject(new Error("Screen live frame did not return base64 data."));
+            return;
+          }
+
+          resolve({
+            width: Number(parsed.width || 0),
+            height: Number(parsed.height || 0),
+            base64: parsed.base64
+          });
+        } catch (parseError) {
+          reject(new Error("Screen live frame JSON parse failed: " + parseError.message));
+        }
+      }
+    );
+  });
+}
+
+async function refreshScreenLiveFrame() {
+  if (!screenLiveState.running || screenLiveState.captureInProgress) return;
+
+  screenLiveState.captureInProgress = true;
+
+  try {
+    const frame = await captureScreenFrameBase64();
+
+    if (!screenLiveState.running) return;
+
+    const sequence = screenLiveState.frameCount + 1;
+    const timestamp = new Date().toISOString();
+    const sizeBytes = Buffer.byteLength(frame.base64, "base64");
+
+    screenLiveState.frameCount = sequence;
+    screenLiveState.lastFrame = {
+      timestamp,
+      width: frame.width,
+      height: frame.height,
+      mimeType: "image/png",
+      sizeBytes,
+      sequence,
+      base64: frame.base64,
+      dataUrl: "data:image/png;base64," + frame.base64
+    };
+    screenLiveState.lastError = null;
+  } catch (error) {
+    screenLiveState.lastError = {
+      message: error.message,
+      timestamp: new Date().toISOString()
+    };
+  } finally {
+    screenLiveState.captureInProgress = false;
+  }
+}
+
+function startScreenLiveLoop(intervalMs) {
+  stopScreenLiveLoop("restart");
+
+  screenLiveState.running = true;
+  screenLiveState.intervalMs = clampScreenLiveInterval(intervalMs);
+  screenLiveState.startedAt = new Date().toISOString();
+  screenLiveState.stoppedAt = null;
+  screenLiveState.frameCount = 0;
+  screenLiveState.lastFrame = null;
+  screenLiveState.lastError = null;
+  screenLiveState.captureInProgress = false;
+
+  refreshScreenLiveFrame();
+
+  screenLiveState.timer = setInterval(() => {
+    refreshScreenLiveFrame();
+  }, screenLiveState.intervalMs);
+}
+
+function stopScreenLiveLoop(reason) {
+  if (screenLiveState.timer) {
+    clearInterval(screenLiveState.timer);
+    screenLiveState.timer = null;
+  }
+
+  if (screenLiveState.running) {
+    screenLiveState.stoppedAt = new Date().toISOString();
+  }
+
+  screenLiveState.running = false;
+  screenLiveState.captureInProgress = false;
+
+  return {
+    reason: reason || "manual_stop",
+    status: getScreenLivePublicStatus()
+  };
+}
+
+async function handleScreenLiveStart(req, res) {
+  let body;
+
+  try {
+    body = await readDeviceJsonBody(req);
+  } catch (error) {
+    sendJson(res, 400, {
+      ok: false,
+      error: "invalid_request_body",
+      message: error.message
+    });
+    return;
+  }
+
+  if (body.confirm !== "SCREEN_LIVE_APPROVED") {
+    const auditFile = writeDeviceAuditEvent({
+      type: "screen_live_denied",
+      ok: false,
+      reason: body.reason || "Missing explicit confirmation",
+      requiredConfirm: "SCREEN_LIVE_APPROVED",
+      timestamp: new Date().toISOString()
+    });
+
+    sendJson(res, 403, {
+      ok: false,
+      component: "Naye Screen Live",
+      error: "explicit_confirmation_required",
+      message: "Screen live requires confirm: SCREEN_LIVE_APPROVED",
+      requiredConfirm: "SCREEN_LIVE_APPROVED",
+      auditFile
+    });
+    return;
+  }
+
+  const intervalMs = clampScreenLiveInterval(body.intervalMs);
+
+  startScreenLiveLoop(intervalMs);
+
+  const auditFile = writeDeviceAuditEvent({
+    type: "screen_live_start",
+    ok: true,
+    reason: body.reason || "Manual user-approved screen live",
+    intervalMs,
+    timestamp: new Date().toISOString()
+  });
+
+  sendJson(res, 200, {
+    ok: true,
+    component: "Naye Screen Live",
+    mode: "live-started",
+    auditFile,
+    status: getScreenLivePublicStatus(),
+    warning: "Screen live is local-only. Frames are kept in memory only and are not sent to cloud."
+  });
+}
+
+async function handleScreenLiveStop(req, res) {
+  const stopped = stopScreenLiveLoop("manual_stop");
+
+  const auditFile = writeDeviceAuditEvent({
+    type: "screen_live_stop",
+    ok: true,
+    timestamp: new Date().toISOString()
+  });
+
+  sendJson(res, 200, {
+    ok: true,
+    component: "Naye Screen Live",
+    mode: "live-stopped",
+    auditFile,
+    status: stopped.status
+  });
+}
+
+function handleScreenLiveStatus(req, res) {
+  sendJson(res, 200, {
+    ok: true,
+    component: "Naye Screen Live",
+    mode: "live-status",
+    status: getScreenLivePublicStatus()
+  });
+}
+
+function handleScreenLiveLatest(req, res) {
+  if (!screenLiveState.running) {
+    sendJson(res, 409, {
+      ok: false,
+      component: "Naye Screen Live",
+      error: "screen_live_not_running",
+      message: "Screen live is not running. Start it with POST /api/screen/live/start.",
+      status: getScreenLivePublicStatus()
+    });
+    return;
+  }
+
+  if (!screenLiveState.lastFrame) {
+    sendJson(res, 202, {
+      ok: false,
+      component: "Naye Screen Live",
+      error: "latest_frame_not_ready",
+      message: "Screen live is running, but the first frame is not ready yet.",
+      status: getScreenLivePublicStatus()
+    });
+    return;
+  }
+
+  sendJson(res, 200, {
+    ok: true,
+    component: "Naye Screen Live",
+    mode: "latest-frame",
+    frame: screenLiveState.lastFrame,
+    policy: {
+      localOnly: true,
+      cloudAttempted: false,
+      cloudBlocked: true,
+      savedToDisk: false,
+      storedInMemoryOnly: true
+    }
+  });
+}
+
+async function handleScreenAnalyzeCurrent(req, res) {
+  if (!screenLiveState.lastFrame) {
+    sendJson(res, 409, {
+      ok: false,
+      component: "Naye Screen Analyzer",
+      error: "no_current_frame",
+      message: "No hay frame actual para analizar. Primero inicia /api/screen/live/start.",
+      status: getScreenLivePublicStatus()
+    });
+    return;
+  }
+
+  sendJson(res, 501, {
+    ok: false,
+    component: "Naye Screen Analyzer",
+    mode: "local-vision-model-required",
+    reply: "Naye ya tiene acceso al frame actual en memoria, pero todavía falta conectar un modelo local de visión para analizar la pantalla sin usar cloud.",
+    frame: {
+      timestamp: screenLiveState.lastFrame.timestamp,
+      width: screenLiveState.lastFrame.width,
+      height: screenLiveState.lastFrame.height,
+      mimeType: screenLiveState.lastFrame.mimeType,
+      sizeBytes: screenLiveState.lastFrame.sizeBytes,
+      sequence: screenLiveState.lastFrame.sequence
+    },
+    route: {
+      requestType: "screen_analysis",
+      allowedRoute: "local_only",
+      cloudAllowed: false,
+      requiresExplicitApproval: false
+    },
+    localModel: {
+      visionConfigured: false,
+      required: true,
+      status: "pending_configuration"
+    },
+    cloud: {
+      attempted: false,
+      blocked: true
+    },
+    policy: {
+      localOnly: true,
+      screenToCloudBlocked: true,
+      storesOnlyLatestFrameInMemory: true
+    }
+  });
 }
 
 
@@ -1056,6 +1415,77 @@ async function handleRequest(req, res) {
     return;
   }
 
+
+  if (url.pathname === "/api/screen/live/start") {
+    if (req.method !== "POST") {
+      sendJson(res, 405, {
+        ok: false,
+        error: "method_not_allowed",
+        allowedMethods: ["POST"]
+      });
+      return;
+    }
+
+    await handleScreenLiveStart(req, res);
+    return;
+  }
+
+  if (url.pathname === "/api/screen/live/stop") {
+    if (req.method !== "POST") {
+      sendJson(res, 405, {
+        ok: false,
+        error: "method_not_allowed",
+        allowedMethods: ["POST"]
+      });
+      return;
+    }
+
+    await handleScreenLiveStop(req, res);
+    return;
+  }
+
+  if (url.pathname === "/api/screen/live/status") {
+    if (req.method !== "GET") {
+      sendJson(res, 405, {
+        ok: false,
+        error: "method_not_allowed",
+        allowedMethods: ["GET"]
+      });
+      return;
+    }
+
+    handleScreenLiveStatus(req, res);
+    return;
+  }
+
+  if (url.pathname === "/api/screen/live/latest") {
+    if (req.method !== "GET") {
+      sendJson(res, 405, {
+        ok: false,
+        error: "method_not_allowed",
+        allowedMethods: ["GET"]
+      });
+      return;
+    }
+
+    handleScreenLiveLatest(req, res);
+    return;
+  }
+
+  if (url.pathname === "/api/screen/analyze-current") {
+    if (req.method !== "POST") {
+      sendJson(res, 405, {
+        ok: false,
+        error: "method_not_allowed",
+        allowedMethods: ["POST"]
+      });
+      return;
+    }
+
+    await handleScreenAnalyzeCurrent(req, res);
+    return;
+  }
+
   if (url.pathname === "/api/model-router/route-check") {
     if (req.method !== "POST") {
       sendJson(res, 405, {
@@ -1151,7 +1581,12 @@ async function handleRequest(req, res) {
       "GET /api/sessions/active",
       "POST /api/chat",
       "POST /api/model-router/route-check",
-      "POST /api/screen/capture-once"
+      "POST /api/screen/capture-once",
+      "POST /api/screen/live/start",
+      "POST /api/screen/live/stop",
+      "GET /api/screen/live/status",
+      "GET /api/screen/live/latest",
+      "POST /api/screen/analyze-current"
     ]
   });
 }
@@ -1184,4 +1619,9 @@ server.listen(PORT, HOST, () => {
   console.log(`- GET  http://${HOST}:${PORT}/api/sessions/active`);
   console.log(`- POST http://${HOST}:${PORT}/api/chat`);
   console.log(`- POST http://${HOST}:${PORT}/api/screen/capture-once`);
+  console.log(`- POST http://${HOST}:${PORT}/api/screen/live/start`);
+  console.log(`- POST http://${HOST}:${PORT}/api/screen/live/stop`);
+  console.log(`- GET  http://${HOST}:${PORT}/api/screen/live/status`);
+  console.log(`- GET  http://${HOST}:${PORT}/api/screen/live/latest`);
+  console.log(`- POST http://${HOST}:${PORT}/api/screen/analyze-current`);
 });
