@@ -53,7 +53,11 @@ async function fetchJsonFromNaye(endpoint, options = {}) {
     "/api/openclaw/config-summary",
     "/api/node/profile",
     "/api/sessions/active",
-    "/api/chat"
+    "/api/chat",
+    "/api/screen/live/status",
+    "/api/screen/live/latest",
+    "/api/screen/live/start",
+    "/api/screen/live/stop"
   ]);
 
   if (!allowedEndpoints.has(endpoint)) {
@@ -97,6 +101,27 @@ ipcMain.handle("naye:get-node-profile", () => fetchJsonFromNaye("/api/node/profi
 ipcMain.handle("naye:get-active-sessions", () => fetchJsonFromNaye("/api/sessions/active"));
 ipcMain.handle("naye:send-chat", (_event, payload) => fetchJsonFromNaye("/api/chat", { method: "POST", body: payload }));
 
+ipcMain.handle("naye:get-screen-live-status", () =>
+  fetchJsonFromNaye("/api/screen/live/status")
+);
+
+ipcMain.handle("naye:get-screen-live-latest", () =>
+  fetchJsonFromNaye("/api/screen/live/latest")
+);
+
+ipcMain.handle("naye:start-screen-live", (_event, payload) =>
+  fetchJsonFromNaye("/api/screen/live/start", {
+    method: "POST",
+    body: payload
+  })
+);
+
+ipcMain.handle("naye:stop-screen-live", () =>
+  fetchJsonFromNaye("/api/screen/live/stop", {
+    method: "POST",
+    body: {}
+  })
+);
 ipcMain.handle("naye:get-desktop-context", () => ({
   appName: "Naye Desktop UX",
   appVersion: app.getVersion(),

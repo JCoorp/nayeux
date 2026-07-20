@@ -6,9 +6,17 @@ import {
   getNodeProfile,
   getOpenClawConfigSummary,
   getOpenClawStatus,
+  getScreenLiveLatest,
+  getScreenLiveStatus,
+  startScreenLive,
+  stopScreenLive,
   sendChatMessage
 } from "./nayeDesktopClient";
-import type { ConnectionState, SystemSnapshot } from "./types";
+import type {
+  ConnectionState,
+  ScreenLiveStatusResponse,
+  SystemSnapshot
+} from "./types";
 import {
   extractPlugins,
   formatDate,
@@ -35,7 +43,7 @@ const INITIAL_SNAPSHOT: SystemSnapshot = {
   warnings: []
 };
 
-type ViewMode = "assistant" | "system" | "openclaw" | "node" | "sessions";
+type ViewMode = "assistant" | "screen" | "system" | "openclaw" | "node" | "sessions";
 
 type ChatMessage = {
   id: string;
@@ -89,6 +97,7 @@ function Sidebar({ activeView, setActiveView, apiState, openClawState, sessionCo
 }) {
   const items: Array<{ id: ViewMode; label: string; caption: string; state?: ConnectionState; badge?: string }> = [
     { id: "assistant", label: "Naye Assistant", caption: "Interfaz principal", state: openClawState },
+    { id: "screen", label: "Vista de Naye", caption: "Pantalla local en vivo", state: apiState },
     { id: "system", label: "Sistema", caption: "API, gateway y warnings", state: apiState },
     { id: "openclaw", label: "OpenClaw", caption: "Bridge y capacidades", state: openClawState },
     { id: "node", label: "Nodo local", caption: "Perfil del equipo" },
@@ -277,6 +286,263 @@ function AssistantWorkspace({ snapshot, refresh }: { snapshot: SystemSnapshot; r
         <MetricCard label="Gateway" value={gateway} helper="Visible solo como referencia operativa" />
         <MetricCard label="Sesiones" value={sessionCount === 0 ? "No hay sesiones activas" : `${sessionCount} sesión(es)`} state={sessionCount > 0 ? "review" : "online"} />
       </aside>
+    </main>
+  );
+}
+
+
+function ScreenPanel() {
+  const [screenStatus, setScreenStatus] =
+    useState<ScreenLiveStatusResponse | null>(null);
+
+  const [frameDataUrl, setFrameDataUrl] =
+    useState<string | null>(null);
+
+  const [screenError, setScreenError] =
+    useState<string | null>(null);
+
+  const [busy, setBusy] = useState(false);
+
+  const refreshScreen = useCallback(async () => {
+    try {
+      const nextStatus = await getScreenLiveStatus();
+      setScreenStatus(nextStatus);
+      setScreenError(null);
+
+      if (
+        nextStatus.status?.running &&
+        nextStatus.status?.hasLatestFrame
+      ) {
+        const latest = await getScreenLiveLatest();
+
+        if (latest.frame?.dataUrl) {
+          setFrameDataUrl(latest.frame.dataUrl);
+        }
+      } else {
+        setFrameDataUrl(null);
+      }
+    } catch (error) {
+      setScreenError(
+        error instanceof Error
+          ? error.message
+          : String(error || "No se pudo consultar Screen Live")
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const tick = async () => {
+      if (cancelled) return;
+
+      await refreshScreen();
+
+      if (!cancelled) {
+        timer = setTimeout(tick, 1000);
+      }
+    };
+
+    void tick();
+
+    return () => {
+      cancelled = true;
+
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
+  }, [refreshScreen]);
+
+  const handleStart = useCallback(async () => {
+    setBusy(true);
+    setScreenError(null);
+
+    try {
+      await startScreenLive(1000);
+      await refreshScreen();
+    } catch (error) {
+      setScreenError(
+        error instanceof Error
+          ? error.message
+          : String(error || "No se pudo iniciar Screen Live")
+      );
+    } finally {
+      setBusy(false);
+    }
+  }, [refreshScreen]);
+
+  const handleStop = useCallback(async () => {
+    setBusy(true);
+    setScreenError(null);
+
+    try {
+      await stopScreenLive();
+      setFrameDataUrl(null);
+      await refreshScreen();
+    } catch (error) {
+      setScreenError(
+        error instanceof Error
+          ? error.message
+          : String(error || "No se pudo detener Screen Live")
+      );
+    } finally {
+      setBusy(false);
+    }
+  }, [refreshScreen]);
+
+  const state = screenStatus?.status;
+
+  const screenState: ConnectionState =
+    screenError
+      ? "error"
+      : state?.running
+        ? "online"
+        : "offline";
+
+  const resolution =
+    state?.latestFrame?.width && state?.latestFrame?.height
+      ? state.latestFrame.width +
+        " × " +
+        state.latestFrame.height
+      : "Sin frame";
+
+  return (
+    <main className="page-panel screen-page">
+      <header className="workspace-header">
+        <div>
+          <span className="eyebrow">Visión local protegida</span>
+          <h2>Vista de Naye</h2>
+          <p>
+            Muestra exactamente el último frame que Naye Core
+            conserva temporalmente en memoria.
+          </p>
+        </div>
+
+        <div className="header-actions">
+          <StatusPill
+            state={screenState}
+            label={
+              state?.running
+                ? "Naye está viendo"
+                : "Visión detenida"
+            }
+          />
+
+          <button
+            className="primary-button"
+            onClick={() => void handleStart()}
+            disabled={busy || Boolean(state?.running)}
+          >
+            {busy && !state?.running
+              ? "Iniciando..."
+              : "Iniciar visión"}
+          </button>
+
+          <button
+            className="secondary-button"
+            onClick={() => void handleStop()}
+            disabled={busy || !state?.running}
+          >
+            Detener visión
+          </button>
+        </div>
+      </header>
+
+      <div className="metric-grid">
+        <MetricCard
+          label="Estado"
+          value={
+            state?.running
+              ? "Pantalla activa"
+              : "Pantalla detenida"
+          }
+          state={screenState}
+        />
+
+        <MetricCard
+          label="Resolución"
+          value={resolution}
+        />
+
+        <MetricCard
+          label="Frame"
+          value={String(
+            state?.latestFrame?.sequence ??
+            state?.frameCount ??
+            0
+          )}
+          helper={
+            state?.latestFrame?.timestamp ||
+            "Todavía no existe un frame"
+          }
+        />
+
+        <MetricCard
+          label="Privacidad"
+          value="LOCAL ONLY"
+          state="online"
+          helper="Cloud bloqueado · Sin guardado continuo en disco"
+        />
+      </div>
+
+      {screenError ? (
+        <div className="error-banner screen-error">
+          <strong>Error de Screen Live</strong>
+          <span>{screenError}</span>
+        </div>
+      ) : null}
+
+      <section className="content-card screen-view-card">
+        <div className="screen-view-toolbar">
+          <div>
+            <h3>Lo que Naye ve</h3>
+            <p>
+              La imagen procede de
+              <code>/api/screen/live/latest</code>.
+            </p>
+          </div>
+
+          <span className="local-only-badge">
+            LOCAL · CLOUD BLOQUEADO
+          </span>
+        </div>
+
+        <div className="screen-frame-shell">
+          {frameDataUrl ? (
+            <img
+              className="screen-live-image"
+              src={frameDataUrl}
+              alt="Último frame local visible para Naye"
+            />
+          ) : (
+            <div className="screen-empty-state">
+              <div className="screen-eye">N</div>
+              <strong>
+                {state?.running
+                  ? "Esperando el primer frame"
+                  : "Naye no está viendo la pantalla"}
+              </strong>
+              <p>
+                Presiona “Iniciar visión” para autorizar
+                Screen Live en esta computadora.
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="content-card privacy-card">
+        <h3>Protección activa</h3>
+
+        <div className="privacy-grid">
+          <span>✓ Último frame solamente en RAM</span>
+          <span>✓ Tráfico limitado a Naye Core local</span>
+          <span>✓ Pantalla bloqueada para OpenAI/OpenClaw</span>
+          <span>○ Modelo local de visión pendiente</span>
+        </div>
+      </section>
     </main>
   );
 }
@@ -526,6 +792,7 @@ export default function App() {
         ) : null}
 
         {activeView === "assistant" ? <AssistantWorkspace snapshot={snapshot} refresh={refresh} /> : null}
+        {activeView === "screen" ? <ScreenPanel /> : null}
         {activeView === "system" ? <SystemPanel snapshot={snapshot} refresh={refresh} /> : null}
         {activeView === "openclaw" ? <OpenClawPanel snapshot={snapshot} refresh={refresh} /> : null}
         {activeView === "node" ? <NodePanel snapshot={snapshot} refresh={refresh} /> : null}

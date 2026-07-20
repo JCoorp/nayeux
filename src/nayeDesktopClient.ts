@@ -6,7 +6,11 @@ import type {
   OpenClawConfigSummary,
   OpenClawStatus,
   ChatRequest,
-  ChatResponse
+  ChatResponse,
+  ScreenLiveActionResponse,
+  ScreenLiveLatestResponse,
+  ScreenLiveStartRequest,
+  ScreenLiveStatusResponse
 } from "./types";
 
 const NAYE_API_BASE_URL = "http://127.0.0.1:17890";
@@ -92,4 +96,63 @@ export async function sendChatMessage(message: string, sessionId?: string | null
   const bridge = requireBridge();
   if (bridge) return bridge.sendChat(payload);
   return postJson<ChatResponse>("/api/chat", payload);
+}
+
+
+export async function getScreenLiveStatus(): Promise<ScreenLiveStatusResponse> {
+  const bridge = requireBridge();
+
+  if (bridge?.getScreenLiveStatus) {
+    return bridge.getScreenLiveStatus();
+  }
+
+  return fetchJson<ScreenLiveStatusResponse>(
+    "/api/screen/live/status"
+  );
+}
+
+export async function getScreenLiveLatest(): Promise<ScreenLiveLatestResponse> {
+  const bridge = requireBridge();
+
+  if (bridge?.getScreenLiveLatest) {
+    return bridge.getScreenLiveLatest();
+  }
+
+  return fetchJson<ScreenLiveLatestResponse>(
+    "/api/screen/live/latest"
+  );
+}
+
+export async function startScreenLive(
+  intervalMs = 1000
+): Promise<ScreenLiveActionResponse> {
+  const payload: ScreenLiveStartRequest = {
+    confirm: "SCREEN_LIVE_APPROVED",
+    intervalMs,
+    reason: "Visión local iniciada explícitamente desde Naye Desktop UX"
+  };
+
+  const bridge = requireBridge();
+
+  if (bridge?.startScreenLive) {
+    return bridge.startScreenLive(payload);
+  }
+
+  return postJson<ScreenLiveActionResponse>(
+    "/api/screen/live/start",
+    payload
+  );
+}
+
+export async function stopScreenLive(): Promise<ScreenLiveActionResponse> {
+  const bridge = requireBridge();
+
+  if (bridge?.stopScreenLive) {
+    return bridge.stopScreenLive();
+  }
+
+  return postJson<ScreenLiveActionResponse>(
+    "/api/screen/live/stop",
+    {}
+  );
 }

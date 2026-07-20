@@ -7,5 +7,9 @@ contextBridge.exposeInMainWorld("nayeDesktop", {
   getOpenClawConfig: () => ipcRenderer.invoke("naye:get-openclaw-config"),
   getNodeProfile: () => ipcRenderer.invoke("naye:get-node-profile"),
   getActiveSessions: () => ipcRenderer.invoke("naye:get-active-sessions"),
-  sendChat: (payload) => ipcRenderer.invoke("naye:send-chat", payload)
+  sendChat: (payload) => ipcRenderer.invoke("naye:send-chat", payload),
+  getScreenLiveStatus: () => ipcRenderer.invoke("naye:get-screen-live-status"),
+  getScreenLiveLatest: () => ipcRenderer.invoke("naye:get-screen-live-latest"),
+  startScreenLive: (payload) => ipcRenderer.invoke("naye:start-screen-live", payload),
+  stopScreenLive: () => ipcRenderer.invoke("naye:stop-screen-live")
 });

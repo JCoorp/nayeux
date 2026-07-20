@@ -63,6 +63,74 @@ export type ChatResponse = {
   };
 };
 
+
+export type ScreenLiveFrameMeta = {
+  timestamp?: string;
+  width?: number;
+  height?: number;
+  mimeType?: string;
+  sizeBytes?: number;
+  sequence?: number;
+};
+
+export type ScreenLiveState = {
+  running?: boolean;
+  intervalMs?: number;
+  startedAt?: string | null;
+  stoppedAt?: string | null;
+  frameCount?: number;
+  captureInProgress?: boolean;
+  hasLatestFrame?: boolean;
+  latestFrame?: ScreenLiveFrameMeta | null;
+  lastError?: {
+    message?: string;
+    timestamp?: string;
+  } | null;
+  policy?: {
+    localOnly?: boolean;
+    cloudBlocked?: boolean;
+    storesOnlyLatestFrameInMemory?: boolean;
+    savesFramesToDisk?: boolean;
+  };
+};
+
+export type ScreenLiveStatusResponse = {
+  ok?: boolean;
+  component?: string;
+  mode?: string;
+  message?: string;
+  status?: ScreenLiveState;
+};
+
+export type ScreenLiveLatestResponse = {
+  ok?: boolean;
+  component?: string;
+  mode?: string;
+  frame?: ScreenLiveFrameMeta & {
+    base64?: string;
+    dataUrl?: string;
+  };
+  policy?: {
+    localOnly?: boolean;
+    cloudAttempted?: boolean;
+    cloudBlocked?: boolean;
+    savedToDisk?: boolean;
+    storedInMemoryOnly?: boolean;
+  };
+};
+
+export type ScreenLiveStartRequest = {
+  confirm: "SCREEN_LIVE_APPROVED";
+  intervalMs?: number;
+  reason?: string;
+};
+
+export type ScreenLiveActionResponse =
+  ScreenLiveStatusResponse & {
+    auditFile?: string;
+    warning?: string;
+  };
+
 export type DesktopContext = {
   appName: string;
   appVersion: string;
@@ -94,6 +162,10 @@ declare global {
       getNodeProfile: () => Promise<NodeProfile>;
       getActiveSessions: () => Promise<ActiveSessions>;
       sendChat: (payload: ChatRequest) => Promise<ChatResponse>;
+      getScreenLiveStatus: () => Promise<ScreenLiveStatusResponse>;
+      getScreenLiveLatest: () => Promise<ScreenLiveLatestResponse>;
+      startScreenLive: (payload: ScreenLiveStartRequest) => Promise<ScreenLiveActionResponse>;
+      stopScreenLive: () => Promise<ScreenLiveActionResponse>;
     };
   }
 }
