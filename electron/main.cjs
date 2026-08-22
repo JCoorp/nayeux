@@ -94,12 +94,72 @@ async function fetchJsonFromNaye(endpoint, options = {}) {
   }
 }
 
+const OPERATIONAL_REQUEST_ROUTES = Object.freeze([
+  Object.freeze({ method: "GET", pattern: /^\/api\/operational\/action-engine\/status$/ }),
+  Object.freeze({ method: "POST", pattern: /^\/api\/operational\/missions$/ }),
+  Object.freeze({ method: "GET", pattern: /^\/api\/operational\/missions\/[^/]+$/ }),
+  Object.freeze({ method: "GET", pattern: /^\/api\/operational\/missions\/[^/]+\/activity$/ }),
+  Object.freeze({ method: "GET", pattern: /^\/api\/operational\/missions\/[^/]+\/orchestration$/ }),
+  Object.freeze({ method: "POST", pattern: /^\/api\/operational\/missions\/[^/]+\/authorize$/ }),
+  Object.freeze({ method: "POST", pattern: /^\/api\/operational\/missions\/[^/]+\/run$/ }),
+  Object.freeze({ method: "POST", pattern: /^\/api\/operational\/missions\/[^/]+\/control$/ }),
+  Object.freeze({ method: "POST", pattern: /^\/api\/operational\/missions\/[^/]+\/revoke$/ })
+]);
+
+function normalizeOperationalRequest(input = {}) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new TypeError("Naye Desktop operational request must be an object.");
+  }
+
+  const endpoint = String(input.endpoint || "").trim();
+  const method = String(input.method || "GET").trim().toUpperCase();
+  if (!endpoint.startsWith("/") || endpoint.includes("?") || endpoint.includes("#")) {
+    throw new TypeError("Naye Desktop operational endpoint is invalid.");
+  }
+  if (!OPERATIONAL_REQUEST_ROUTES.some((route) => route.method === method && route.pattern.test(endpoint))) {
+    throw new Error(`Operational endpoint not allowed from Naye Desktop UX: ${method} ${endpoint}`);
+  }
+
+  return {
+    endpoint,
+    method,
+    body: input.body
+  };
+}
+
+async function fetchOperationalJsonFromNaye(input = {}) {
+  const request = normalizeOperationalRequest(input);
+  const res = await fetch(`${NAYE_API_BASE_URL}${request.endpoint}`, {
+    method: request.method,
+    headers: {
+      "Accept": "application/json",
+      ...(request.method === "POST" ? { "Content-Type": "application/json" } : {})
+    },
+    ...(request.method === "POST" ? { body: JSON.stringify(request.body ?? {}) } : {})
+  });
+
+  const raw = await res.text();
+  let data = null;
+  try {
+    data = raw ? JSON.parse(raw) : null;
+  } catch {
+    data = raw ? { error: "naye_core_non_json_response", raw } : null;
+  }
+
+  return {
+    ok: res.ok,
+    status: res.status,
+    data
+  };
+}
+
 ipcMain.handle("naye:get-status", () => fetchJsonFromNaye("/api/status"));
 ipcMain.handle("naye:get-openclaw-status", () => fetchJsonFromNaye("/api/openclaw/status"));
 ipcMain.handle("naye:get-openclaw-config", () => fetchJsonFromNaye("/api/openclaw/config-summary"));
 ipcMain.handle("naye:get-node-profile", () => fetchJsonFromNaye("/api/node/profile"));
 ipcMain.handle("naye:get-active-sessions", () => fetchJsonFromNaye("/api/sessions/active"));
 ipcMain.handle("naye:send-chat", (_event, payload) => fetchJsonFromNaye("/api/chat", { method: "POST", body: payload }));
+ipcMain.handle("naye:operational-request", (_event, payload) => fetchOperationalJsonFromNaye(payload));
 
 ipcMain.handle("naye:get-screen-live-status", () =>
   fetchJsonFromNaye("/api/screen/live/status")
