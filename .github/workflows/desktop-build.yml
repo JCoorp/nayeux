@@ -40,5 +40,15 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --ignore-scripts
 
+      - name: Validate Electron scripts
+        run: |
+          node --check electron/main.cjs
+          node --check electron/preload.cjs
+          node --check electron/operationalBridgePolicy.cjs
+          node --check electron/operationalBridgePolicy.test.cjs
+
+      - name: Prove bounded operational bridge policy
+        run: node electron/operationalBridgePolicy.test.cjs
+
       - name: Type-check and build renderer
         run: npm run build
