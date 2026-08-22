@@ -5,7 +5,7 @@ const {
 } = require("./operationalBridgePolicy.cjs");
 
 const NAYE_API_BASE_URL = "http://127.0.0.1:17890";
-const isDev = !app.isPackaged;
+const useDevServer = process.argv.includes("--naye-dev");
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -27,7 +27,7 @@ function createWindow() {
   win.removeMenu();
   win.once("ready-to-show", () => win.show());
 
-  if (isDev) {
+  if (useDevServer) {
     win.loadURL("http://127.0.0.1:5173");
   } else {
     win.loadFile(path.join(__dirname, "..", "dist", "index.html"));
@@ -155,9 +155,9 @@ ipcMain.handle("naye:stop-screen-live", () =>
 ipcMain.handle("naye:get-desktop-context", () => ({
   appName: "Naye Desktop UX",
   appVersion: app.getVersion(),
-  mode: isDev ? "development" : "production",
+  mode: useDevServer ? "development" : "production",
   apiBaseUrl: NAYE_API_BASE_URL,
-  renderer: isDev ? "vite-dev-server" : "local-desktop-bundle"
+  renderer: useDevServer ? "vite-dev-server" : "local-desktop-bundle"
 }));
 
 app.whenReady().then(() => {
