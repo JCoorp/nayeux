@@ -7,6 +7,7 @@ import {
   getOperationalMissionOrchestration,
   getOperationalMissionStatus,
   proposeOperationalMission,
+  revokeOperationalMission,
   runOperationalMission
 } from "./operationalClient";
 import type {
@@ -280,6 +281,25 @@ export default function OperationalMissionPanel() {
     }
   }, [missionId, refresh]);
 
+  const revokeMission = useCallback(async () => {
+    if (!missionId) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await revokeOperationalMission(
+        missionId,
+        OPERATOR,
+        "Revocación explícita desde Naye Desktop UX"
+      );
+      await refresh();
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : String(nextError));
+      await refresh().catch(() => undefined);
+    } finally {
+      setBusy(false);
+    }
+  }, [missionId, refresh]);
+
   return (
     <div className="operational-page">
       <header className="operational-hero">
@@ -289,7 +309,7 @@ export default function OperationalMissionPanel() {
           <p>
             Autoriza el objetivo y su alcance una vez. Naye puede detectar capacidades faltantes,
             desarrollarlas dentro de esa autoridad y continuar la misma misión, mientras publica
-            cada cambio y conserva Pause, Stop y Rollback.
+            cada cambio y conserva Pause, Stop, Rollback y Revocación.
           </p>
         </div>
         <div className={`operational-engine-state ${engine?.available ? "is-live" : ""}`}>
@@ -453,6 +473,13 @@ export default function OperationalMissionPanel() {
             onClick={() => void controlMission("rollback")}
           >
             Rollback
+          </button>
+          <button
+            className="is-danger"
+            disabled={!authorizationActive || busy}
+            onClick={() => void revokeMission()}
+          >
+            Revocar autorización
           </button>
         </div>
       </section>
