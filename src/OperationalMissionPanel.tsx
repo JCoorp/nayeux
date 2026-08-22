@@ -274,9 +274,14 @@ export default function OperationalMissionPanel() {
       await refresh();
       setControlBusy(false);
       if (type === "resume") {
-        const runResult = await runOperationalMission(missionId);
-        setLastRun(runResult);
-        await refresh();
+        setBusy(true);
+        try {
+          const runResult = await runOperationalMission(missionId);
+          setLastRun(runResult);
+          await refresh();
+        } finally {
+          setBusy(false);
+        }
       }
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : String(nextError));
