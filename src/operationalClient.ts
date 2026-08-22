@@ -11,6 +11,11 @@ import type {
 
 const NAYE_API_BASE_URL = "http://127.0.0.1:17890";
 
+type OperationalRequestOptions = {
+  method?: "GET" | "POST";
+  body?: unknown;
+};
+
 export class OperationalApiRequestError extends Error {
   status: number;
   body: unknown;
@@ -23,17 +28,48 @@ export class OperationalApiRequestError extends Error {
   }
 }
 
+function errorDetail(data: unknown, status: number): string {
+  const source = data && typeof data === "object" ? data as Record<string, unknown> : {};
+  return String(
+    source.reason ||
+    source.error ||
+    source.message ||
+    `HTTP ${status}`
+  );
+}
+
 async function requestJson<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: OperationalRequestOptions = {}
 ): Promise<T> {
+  const method = options.method || "GET";
+  const bridge = window.nayeDesktop;
+
+  if (bridge?.operationalRequest) {
+    const result = await bridge.operationalRequest({
+      endpoint,
+      method,
+      ...(options.body !== undefined ? { body: options.body } : {})
+    });
+
+    if (!result.ok) {
+      throw new OperationalApiRequestError(
+        `Naye Operational API: ${errorDetail(result.data, result.status)}`,
+        result.status,
+        result.data
+      );
+    }
+
+    return result.data as T;
+  }
+
   const response = await fetch(`${NAYE_API_BASE_URL}${endpoint}`, {
-    ...options,
+    method,
     headers: {
       "Accept": "application/json",
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
-      ...(options.headers || {})
-    }
+      ...(options.body !== undefined ? { "Content-Type": "application/json" } : {})
+    },
+    ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {})
   });
 
   let data: unknown = null;
@@ -44,15 +80,8 @@ async function requestJson<T>(
   }
 
   if (!response.ok) {
-    const source = data && typeof data === "object" ? data as Record<string, unknown> : {};
-    const detail = String(
-      source.reason ||
-      source.error ||
-      source.message ||
-      `HTTP ${response.status}`
-    );
     throw new OperationalApiRequestError(
-      `Naye Operational API: ${detail}`,
+      `Naye Operational API: ${errorDetail(data, response.status)}`,
       response.status,
       data
     );
@@ -64,7 +93,7 @@ async function requestJson<T>(
 function postJson<T>(endpoint: string, body: unknown): Promise<T> {
   return requestJson<T>(endpoint, {
     method: "POST",
-    body: JSON.stringify(body)
+    body
   });
 }
 
