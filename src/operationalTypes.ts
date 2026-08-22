@@ -2,6 +2,8 @@ export type OperationalCapability = {
   id?: string | null;
   version?: string | null;
   capability?: string | null;
+  capabilityVersion?: string | null;
+  implementationHash?: string | null;
   available?: boolean;
   automaticExecution?: boolean;
   hasExecutor?: boolean;
@@ -49,6 +51,7 @@ export type OperationalMission = {
     workspaceRoots?: string[];
     maxActions?: number;
   };
+  metadata?: Record<string, unknown>;
 };
 
 export type OperationalMissionProposal = {
@@ -123,6 +126,67 @@ export type OperationalMissionActivityResponse = {
   schema?: string;
   missionId?: string;
   activity?: OperationalActivityEvent[];
+};
+
+export type OperationalOrchestratorSnapshot = {
+  missionId?: string;
+  runId?: string | null;
+  state?: string;
+  reason?: string;
+  terminal?: boolean;
+  retryable?: boolean;
+  cursor?: number;
+  planningAttempts?: number;
+  currentStep?: Record<string, unknown> | null;
+  capabilityGap?: Record<string, unknown> | null;
+  development?: Record<string, unknown> | null;
+  stepResults?: Array<Record<string, unknown>>;
+};
+
+export type OperationalMissionOrchestrationStatus = {
+  schema?: string;
+  version?: string;
+  id?: string;
+  missionId?: string;
+  available?: boolean;
+  runnable?: boolean;
+  liveRuntimeConstructed?: boolean;
+  running?: boolean;
+  automaticExecution?: boolean;
+  modelIsAuthority?: boolean;
+  sourceAuthorIsAuthority?: boolean;
+  humanAuthorityRequired?: boolean;
+  hardSemanticCapabilityCeilingEncoded?: boolean;
+  missionHash?: string | null;
+  authorizationActive?: boolean;
+  control?: OperationalControlState | null;
+  runtime?: {
+    runtimeId?: string;
+    authorizationId?: string;
+    policy?: {
+      maxPlanSteps?: number | null;
+      maxPlanningAttempts?: number | null;
+      maxCapabilityDevelopmentAttempts?: number | null;
+      source?: string;
+      hardMaximumEncoded?: boolean;
+    };
+    developmentRoot?: string;
+    orchestrator?: OperationalOrchestratorSnapshot;
+  } | null;
+};
+
+export type OperationalMissionRunResponse = {
+  schema?: string;
+  version?: string;
+  missionId?: string;
+  runtimeId?: string;
+  started?: boolean;
+  completed?: boolean;
+  retryable?: boolean;
+  reason?: string;
+  error?: string;
+  result?: OperationalOrchestratorSnapshot | null;
+  automaticExecution?: boolean;
 };
 
 export type OperationalControlResponse = {
