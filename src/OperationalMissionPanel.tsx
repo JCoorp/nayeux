@@ -4,12 +4,16 @@ import {
   controlOperationalMission,
   getOperationalActionEngineStatus,
   getOperationalMissionActivity,
+  getOperationalMissionOrchestration,
   getOperationalMissionStatus,
-  proposeOperationalMission
+  proposeOperationalMission,
+  runOperationalMission
 } from "./operationalClient";
 import type {
   OperationalActionEngineStatus,
   OperationalActivityEvent,
+  OperationalMissionOrchestrationStatus,
+  OperationalMissionRunResponse,
   OperationalMissionStatus
 } from "./operationalTypes";
 
@@ -18,17 +22,23 @@ const OPERATOR = {
   role: "operator"
 };
 
-const INITIAL_CAPABILITIES = [
-  "file.create_text",
-  "file.read",
-  "file.update_text",
-  "directory.create",
-  "directory.list",
-  "process.run_bounded",
-  "build.run",
-  "test.run",
-  "network.inspect"
-];
+const INITIAL_CAPABILITIES = ["file.create_text"];
+const LOCAL_DEVELOPMENT_PROFILE = "naye_local_process_structured_v1";
+
+const ADAPTIVE_POLICY = {
+  maxActions: 64,
+  durationMs: 4 * 60 * 60 * 1000,
+  maxPlanSteps: "unbounded" as const,
+  maxPlanningAttempts: 20,
+  maxCapabilityDevelopmentAttempts: 20,
+  maxArtifactBytes: 32 * 1024 * 1024,
+  maxWorkspaceBytes: 512 * 1024 * 1024,
+  maxFiles: 20000,
+  toolTimeoutMs: 120000,
+  maxToolInputBytes: 32 * 1024 * 1024,
+  maxToolOutputBytes: 32 * 1024 * 1024,
+  maxToolArgs: 512
+};
 
 function eventTime(event: OperationalActivityEvent): string {
   const source = event as OperationalActivityEvent & {
@@ -48,15 +58,24 @@ function engineStateLabel(engine: OperationalActionEngineStatus | null): string 
   return "Esperando misión autorizada";
 }
 
+function orchestrationStateLabel(orchestration: OperationalMissionOrchestrationStatus | null): string {
+  const state = orchestration?.runtime?.orchestrator?.state;
+  if (state) return state;
+  if (orchestration?.authorizationActive) return "lista para ejecutar";
+  return "esperando autorización";
+}
+
 export default function OperationalMissionPanel() {
   const [engine, setEngine] = useState<OperationalActionEngineStatus | null>(null);
   const [mission, setMission] = useState<OperationalMissionStatus | null>(null);
+  const [orchestration, setOrchestration] = useState<OperationalMissionOrchestrationStatus | null>(null);
+  const [lastRun, setLastRun] = useState<OperationalMissionRunResponse | null>(null);
   const [activity, setActivity] = useState<OperationalActivityEvent[]>([]);
   const [objective, setObjective] = useState(
-    "Desarrolla una aplicación que conecte mi celular con esta computadora, construye las capacidades que te falten, pruébala y verifica que la conexión funcione."
+    "Crea un resultado verificable dentro del workspace autorizado. Si falta una capacidad para cumplir el objetivo, desarróllala, pruébala, actívala y continúa la misma misión."
   );
   const [workspaceRoot, setWorkspaceRoot] = useState(
-    "F:\\NayeVault\\missions\\phone-pc-app"
+    "F:\\NayeVault\\missions\\operational-workspace"
   );
   const [missionId, setMissionId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -68,12 +87,14 @@ export default function OperationalMissionPanel() {
     setEngine(engineResult.actionEngine || null);
 
     if (missionId) {
-      const [missionResult, activityResult] = await Promise.all([
+      const [missionResult, activityResult, orchestrationResult] = await Promise.all([
         getOperationalMissionStatus(missionId),
-        getOperationalMissionActivity(missionId)
+        getOperationalMissionActivity(missionId),
+        getOperationalMissionOrchestration(missionId)
       ]);
       setMission(missionResult);
       setActivity(activityResult.activity || []);
+      setOrchestration(orchestrationResult);
     }
 
     setLastRefresh(new Date().toISOString());
@@ -109,40 +130,89 @@ export default function OperationalMissionPanel() {
   );
 
   const authorizationActive = Boolean(
-    mission?.authorization &&
-    (mission.authorization as { active?: boolean }).active === true
+    mission?.runtime?.authorization?.active === true ||
+    (mission?.authorization && (mission.authorization as { active?: boolean }).active === true)
   );
   const desiredState = mission?.control?.desiredState || "not_started";
-  const terminal = mission?.control?.terminal === true;
+  const controlTerminal = mission?.control?.terminal === true;
+  const orchestrator = orchestration?.runtime?.orchestrator || null;
 
   const createMission = useCallback(async () => {
     if (!objective.trim() || !workspaceRoot.trim()) return;
     setBusy(true);
     setError(null);
+    setLastRun(null);
     try {
       const proposal = await proposeOperationalMission({
         objective: objective.trim(),
         requestedBy: { userId: "local-desktop-user" },
-        risk: "low",
+        risk: "medium",
         allowedCapabilities: INITIAL_CAPABILITIES,
-        resourceIds: ["project:phone-pc-app"],
+        resourceIds: ["project:operational-mission"],
         workspaceRoots: [workspaceRoot.trim()],
-        maxActions: 16,
-        durationMs: 60 * 60 * 1000,
+        maxActions: ADAPTIVE_POLICY.maxActions,
+        durationMs: ADAPTIVE_POLICY.durationMs,
         rollbackRequired: true,
         verificationRequired: true,
         metadata: {
           source: "naye_desktop_ux",
           mode: "operational_mission",
-          adaptiveCapabilityDevelopmentRequested: true
+          adaptiveCapabilityDevelopmentRequested: true,
+          adaptiveCapabilityPolicy: {
+            enabled: true,
+            maxDerivedCapabilities: "unbounded",
+            maxRisk: "medium",
+            allowedCategories: ["development"],
+            requireTests: true,
+            requireVerification: true,
+            requireRollbackForMutations: true,
+            allowIrreversibleMutations: false,
+            allowCapabilityReplacement: true
+          },
+          liveOrchestrationPolicy: {
+            maxPlanSteps: ADAPTIVE_POLICY.maxPlanSteps,
+            maxPlanningAttempts: ADAPTIVE_POLICY.maxPlanningAttempts,
+            maxCapabilityDevelopmentAttempts: ADAPTIVE_POLICY.maxCapabilityDevelopmentAttempts
+          },
+          capabilityDevelopmentPolicyRequest: {
+            workspaceBudgets: {
+              maxArtifactBytes: ADAPTIVE_POLICY.maxArtifactBytes,
+              maxWorkspaceBytes: ADAPTIVE_POLICY.maxWorkspaceBytes,
+              maxFiles: ADAPTIVE_POLICY.maxFiles
+            },
+            developmentExecution: {
+              profile: LOCAL_DEVELOPMENT_PROFILE,
+              limits: {
+                timeoutMs: ADAPTIVE_POLICY.toolTimeoutMs,
+                maxInputBytes: ADAPTIVE_POLICY.maxToolInputBytes,
+                maxOutputBytes: ADAPTIVE_POLICY.maxToolOutputBytes,
+                maxArgs: ADAPTIVE_POLICY.maxToolArgs
+              }
+            },
+            runtimeExecution: {
+              profile: LOCAL_DEVELOPMENT_PROFILE,
+              limits: {
+                timeoutMs: ADAPTIVE_POLICY.toolTimeoutMs,
+                maxInputBytes: ADAPTIVE_POLICY.maxToolInputBytes,
+                maxOutputBytes: ADAPTIVE_POLICY.maxToolOutputBytes,
+                maxArgs: ADAPTIVE_POLICY.maxToolArgs
+              }
+            }
+          },
+          taskSpecificFutureChallengePrepared: false
         }
       });
       const nextMissionId = proposal.mission?.missionId || null;
       if (!nextMissionId) throw new Error("Naye Core no devolvió missionId.");
       setMissionId(nextMissionId);
-      setMission(await getOperationalMissionStatus(nextMissionId));
-      const nextActivity = await getOperationalMissionActivity(nextMissionId);
+      const [nextMission, nextActivity, nextOrchestration] = await Promise.all([
+        getOperationalMissionStatus(nextMissionId),
+        getOperationalMissionActivity(nextMissionId),
+        getOperationalMissionOrchestration(nextMissionId)
+      ]);
+      setMission(nextMission);
       setActivity(nextActivity.activity || []);
+      setOrchestration(nextOrchestration);
       setEngine((await getOperationalActionEngineStatus()).actionEngine || null);
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : String(nextError));
@@ -151,15 +221,34 @@ export default function OperationalMissionPanel() {
     }
   }, [objective, workspaceRoot]);
 
-  const authorizeMission = useCallback(async () => {
+  const authorizeAndRunMission = useCallback(async () => {
     if (!missionId) return;
     setBusy(true);
     setError(null);
     try {
       await authorizeOperationalMission(missionId, OPERATOR);
+      const runResult = await runOperationalMission(missionId);
+      setLastRun(runResult);
       await refresh();
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : String(nextError));
+      await refresh().catch(() => undefined);
+    } finally {
+      setBusy(false);
+    }
+  }, [missionId, refresh]);
+
+  const continueMission = useCallback(async () => {
+    if (!missionId) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const runResult = await runOperationalMission(missionId);
+      setLastRun(runResult);
+      await refresh();
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : String(nextError));
+      await refresh().catch(() => undefined);
     } finally {
       setBusy(false);
     }
@@ -178,9 +267,14 @@ export default function OperationalMissionPanel() {
         OPERATOR,
         `Solicitud ${type} desde Naye Desktop UX`
       );
+      if (type === "resume") {
+        const runResult = await runOperationalMission(missionId);
+        setLastRun(runResult);
+      }
       await refresh();
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : String(nextError));
+      await refresh().catch(() => undefined);
     } finally {
       setBusy(false);
     }
@@ -193,8 +287,9 @@ export default function OperationalMissionPanel() {
           <span className="operational-eyebrow">NAYE ESTÁ TRABAJANDO</span>
           <h1>Misiones operacionales</h1>
           <p>
-            Autoriza el objetivo una vez. Naye trabaja dentro del alcance de la misión,
-            publica cada cambio en Activity Stream y conserva Pause, Stop y Rollback.
+            Autoriza el objetivo y su alcance una vez. Naye puede detectar capacidades faltantes,
+            desarrollarlas dentro de esa autoridad y continuar la misma misión, mientras publica
+            cada cambio y conserva Pause, Stop y Rollback.
           </p>
         </div>
         <div className={`operational-engine-state ${engine?.available ? "is-live" : ""}`}>
@@ -240,6 +335,15 @@ export default function OperationalMissionPanel() {
             />
           </label>
 
+          <div className="operational-truth-grid">
+            <span>Expansión adaptativa: permitida</span>
+            <span>Riesgo máximo derivado: medium</span>
+            <span>Capabilities derivadas: sin máximo semántico</span>
+            <span>Plan: sin máximo de pasos</span>
+            <span>Intentos planner/desarrollo: {ADAPTIVE_POLICY.maxPlanningAttempts}</span>
+            <span>Workspace desarrollo: {Math.round(ADAPTIVE_POLICY.maxWorkspaceBytes / 1024 / 1024)} MB</span>
+          </div>
+
           {!missionId ? (
             <button className="operational-primary" disabled={busy} onClick={() => void createMission()}>
               {busy ? "Creando misión..." : "Crear misión"}
@@ -251,11 +355,13 @@ export default function OperationalMissionPanel() {
               <div>
                 <strong>La misión está propuesta</strong>
                 <p>
-                  Una autorización cubre el objetivo y su alcance. No se solicitará aprobación por cada archivo o paso.
+                  Core ya resolvió la identidad local de ejecución dentro del Mission Envelope.
+                  Esta autorización cubre el objetivo, workspace y política adaptativa mostrada;
+                  no se pedirá aprobación por cada archivo o paso.
                 </p>
               </div>
-              <button className="operational-primary" disabled={busy} onClick={() => void authorizeMission()}>
-                {busy ? "Autorizando..." : "Autorizar misión y comenzar"}
+              <button className="operational-primary" disabled={busy} onClick={() => void authorizeAndRunMission()}>
+                {busy ? "Autorizando y ejecutando..." : "Autorizar misión y comenzar"}
               </button>
             </div>
           ) : null}
@@ -263,8 +369,23 @@ export default function OperationalMissionPanel() {
           {authorizationActive ? (
             <div className="operational-authorized">
               <strong>Misión autorizada</strong>
-              <span>Estado deseado: {desiredState}</span>
+              <span>Control: {desiredState}</span>
+              <span>Orquestación: {orchestrationStateLabel(orchestration)}</span>
               <span>Recovery tras reinicio: {mission?.processRestartMissionRecovery ? "activo" : "pendiente"}</span>
+            </div>
+          ) : null}
+
+          {authorizationActive && orchestrator?.terminal !== true && orchestrator?.retryable === true && !orchestration?.running ? (
+            <button className="operational-primary" disabled={busy} onClick={() => void continueMission()}>
+              {busy ? "Continuando..." : "Continuar misión"}
+            </button>
+          ) : null}
+
+          {lastRun ? (
+            <div className="operational-authorized">
+              <strong>Último ciclo de ejecución</strong>
+              <span>{lastRun.completed ? "Completado" : "Yield operacional"}</span>
+              <span>{lastRun.reason || lastRun.result?.reason || "sin reason"}</span>
             </div>
           ) : null}
         </section>
@@ -273,7 +394,7 @@ export default function OperationalMissionPanel() {
           <div className="operational-card-heading">
             <div>
               <span>Runtime</span>
-              <h2>Capacidades</h2>
+              <h2>Capacidades realmente activas</h2>
             </div>
           </div>
           <div className="operational-capability-list">
@@ -284,7 +405,7 @@ export default function OperationalMissionPanel() {
               </div>
             )) : (
               <p className="operational-muted">
-                El runtime mostrará aquí únicamente capabilities realmente activadas y verificadas.
+                El runtime mostrará aquí únicamente capabilities realmente registradas y verificadas.
               </p>
             )}
           </div>
@@ -292,6 +413,8 @@ export default function OperationalMissionPanel() {
             <span>Automatic execution: {engine?.automaticExecution ? "true" : "false"}</span>
             <span>Restart recovery: {engine?.processRestartMissionRecovery ? "true" : "false"}</span>
             <span>Power-loss durability: {engine?.powerLossDurabilityClaimed ? "true" : "false"}</span>
+            <span>Modelo es autoridad: {orchestration?.modelIsAuthority ? "true" : "false"}</span>
+            <span>Author es autoridad: {orchestration?.sourceAuthorIsAuthority ? "true" : "false"}</span>
           </div>
         </section>
       </div>
@@ -306,27 +429,27 @@ export default function OperationalMissionPanel() {
         </div>
         <div className="operational-controls">
           <button
-            disabled={!authorizationActive || terminal || busy || desiredState === "paused"}
+            disabled={!authorizationActive || controlTerminal || busy || desiredState === "paused"}
             onClick={() => void controlMission("pause")}
           >
             Pausar
           </button>
           <button
-            disabled={!authorizationActive || terminal || busy || desiredState !== "paused"}
+            disabled={!authorizationActive || controlTerminal || busy || desiredState !== "paused"}
             onClick={() => void controlMission("resume")}
           >
             Reanudar
           </button>
           <button
             className="is-danger"
-            disabled={!authorizationActive || terminal || busy}
+            disabled={!authorizationActive || controlTerminal || busy}
             onClick={() => void controlMission("stop")}
           >
             Stop
           </button>
           <button
             className="is-warning"
-            disabled={!authorizationActive || terminal || busy}
+            disabled={!authorizationActive || controlTerminal || busy}
             onClick={() => void controlMission("rollback")}
           >
             Rollback
