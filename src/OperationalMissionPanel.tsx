@@ -80,6 +80,7 @@ export default function OperationalMissionPanel() {
   );
   const [missionId, setMissionId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [controlBusy, setControlBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<string | null>(null);
 
@@ -137,6 +138,7 @@ export default function OperationalMissionPanel() {
   const desiredState = mission?.control?.desiredState || "not_started";
   const controlTerminal = mission?.control?.terminal === true;
   const orchestrator = orchestration?.runtime?.orchestrator || null;
+  const orchestrationRunning = orchestration?.running === true;
 
   const createMission = useCallback(async () => {
     if (!objective.trim() || !workspaceRoot.trim()) return;
@@ -228,6 +230,7 @@ export default function OperationalMissionPanel() {
     setError(null);
     try {
       await authorizeOperationalMission(missionId, OPERATOR);
+      await refresh();
       const runResult = await runOperationalMission(missionId);
       setLastRun(runResult);
       await refresh();
@@ -259,7 +262,7 @@ export default function OperationalMissionPanel() {
     type: "pause" | "resume" | "stop" | "rollback"
   ) => {
     if (!missionId) return;
-    setBusy(true);
+    setControlBusy(true);
     setError(null);
     try {
       await controlOperationalMission(
@@ -268,22 +271,24 @@ export default function OperationalMissionPanel() {
         OPERATOR,
         `Solicitud ${type} desde Naye Desktop UX`
       );
+      await refresh();
+      setControlBusy(false);
       if (type === "resume") {
         const runResult = await runOperationalMission(missionId);
         setLastRun(runResult);
+        await refresh();
       }
-      await refresh();
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : String(nextError));
       await refresh().catch(() => undefined);
     } finally {
-      setBusy(false);
+      setControlBusy(false);
     }
   }, [missionId, refresh]);
 
   const revokeMission = useCallback(async () => {
     if (!missionId) return;
-    setBusy(true);
+    setControlBusy(true);
     setError(null);
     try {
       await revokeOperationalMission(
@@ -296,7 +301,7 @@ export default function OperationalMissionPanel() {
       setError(nextError instanceof Error ? nextError.message : String(nextError));
       await refresh().catch(() => undefined);
     } finally {
-      setBusy(false);
+      setControlBusy(false);
     }
   }, [missionId, refresh]);
 
@@ -309,7 +314,7 @@ export default function OperationalMissionPanel() {
           <p>
             Autoriza el objetivo y su alcance una vez. Naye puede detectar capacidades faltantes,
             desarrollarlas dentro de esa autoridad y continuar la misma misión, mientras publica
-            cada cambio y conserva Pause, Stop, Rollback y Revocación.
+            cada cambio y conserva Pause, Stop, Rollback y Revocación incluso mientras trabaja.
           </p>
         </div>
         <div className={`operational-engine-state ${engine?.available ? "is-live" : ""}`}>
@@ -395,7 +400,7 @@ export default function OperationalMissionPanel() {
             </div>
           ) : null}
 
-          {authorizationActive && orchestrator?.terminal !== true && orchestrator?.retryable === true && !orchestration?.running ? (
+          {authorizationActive && orchestrator?.terminal !== true && orchestrator?.retryable === true && !orchestrationRunning ? (
             <button className="operational-primary" disabled={busy} onClick={() => void continueMission()}>
               {busy ? "Continuando..." : "Continuar misión"}
             </button>
@@ -444,39 +449,39 @@ export default function OperationalMissionPanel() {
           <span className="operational-eyebrow">CONTROL HUMANO PERMANENTE</span>
           <h2>{authorizationActive ? "Misión en curso" : "Esperando autorización"}</h2>
           <p>
-            Puedes observar el proceso sin intervenir. Usa los controles solamente cuando quieras cambiar el estado de la misión.
+            Puedes observar el proceso sin intervenir. Pause, Stop, Rollback y Revocación permanecen disponibles durante una ejecución activa.
           </p>
         </div>
         <div className="operational-controls">
           <button
-            disabled={!authorizationActive || controlTerminal || busy || desiredState === "paused"}
+            disabled={!authorizationActive || controlTerminal || controlBusy || desiredState === "paused"}
             onClick={() => void controlMission("pause")}
           >
             Pausar
           </button>
           <button
-            disabled={!authorizationActive || controlTerminal || busy || desiredState !== "paused"}
+            disabled={!authorizationActive || controlTerminal || controlBusy || desiredState !== "paused" || orchestrationRunning}
             onClick={() => void controlMission("resume")}
           >
             Reanudar
           </button>
           <button
             className="is-danger"
-            disabled={!authorizationActive || controlTerminal || busy}
+            disabled={!authorizationActive || controlTerminal || controlBusy}
             onClick={() => void controlMission("stop")}
           >
             Stop
           </button>
           <button
             className="is-warning"
-            disabled={!authorizationActive || controlTerminal || busy}
+            disabled={!authorizationActive || controlTerminal || controlBusy}
             onClick={() => void controlMission("rollback")}
           >
             Rollback
           </button>
           <button
             className="is-danger"
-            disabled={!authorizationActive || busy}
+            disabled={!authorizationActive || controlBusy}
             onClick={() => void revokeMission()}
           >
             Revocar autorización
