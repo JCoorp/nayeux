@@ -3,7 +3,9 @@ import type {
   OperationalControlResponse,
   OperationalMissionActivityResponse,
   OperationalMissionAuthorization,
+  OperationalMissionOrchestrationStatus,
   OperationalMissionProposal,
+  OperationalMissionRunResponse,
   OperationalMissionStatus
 } from "./operationalTypes";
 
@@ -105,6 +107,23 @@ export function authorizeOperationalMission(
         approvalMode: "mission_scope_once"
       }
     }
+  );
+}
+
+export function runOperationalMission(
+  missionId: string
+): Promise<OperationalMissionRunResponse> {
+  return postJson<OperationalMissionRunResponse>(
+    `/api/operational/missions/${encodeURIComponent(missionId)}/run`,
+    {}
+  );
+}
+
+export function getOperationalMissionOrchestration(
+  missionId: string
+): Promise<OperationalMissionOrchestrationStatus> {
+  return requestJson<OperationalMissionOrchestrationStatus>(
+    `/api/operational/missions/${encodeURIComponent(missionId)}/orchestration`
   );
 }
 
