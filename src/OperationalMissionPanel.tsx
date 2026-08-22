@@ -24,6 +24,7 @@ const OPERATOR = {
 };
 
 const INITIAL_CAPABILITIES = ["file.create_text"];
+const INITIAL_RESOURCE_IDS = ["project:operational-mission"];
 const LOCAL_DEVELOPMENT_PROFILE = "naye_local_process_structured_v1";
 
 const ADAPTIVE_POLICY = {
@@ -151,7 +152,7 @@ export default function OperationalMissionPanel() {
         requestedBy: { userId: "local-desktop-user" },
         risk: "medium",
         allowedCapabilities: INITIAL_CAPABILITIES,
-        resourceIds: ["project:operational-mission"],
+        resourceIds: INITIAL_RESOURCE_IDS,
         workspaceRoots: [workspaceRoot.trim()],
         maxActions: ADAPTIVE_POLICY.maxActions,
         durationMs: ADAPTIVE_POLICY.durationMs,
@@ -365,13 +366,38 @@ export default function OperationalMissionPanel() {
             />
           </label>
 
+          <div className="operational-card-heading">
+            <div>
+              <span>Scope que autorizarás</span>
+              <h2>Política explícita de esta misión</h2>
+            </div>
+          </div>
           <div className="operational-truth-grid">
+            <span>Capability inicial: {INITIAL_CAPABILITIES.join(", ")}</span>
+            <span>Resource scope: {INITIAL_RESOURCE_IDS.join(", ")}</span>
+            <span>Riesgo de misión: medium</span>
+            <span>Máximo de acciones: {ADAPTIVE_POLICY.maxActions}</span>
+            <span>Duración máxima: {ADAPTIVE_POLICY.durationMs / 60 / 60 / 1000} h</span>
+            <span>Verification: requerida</span>
+            <span>Rollback: requerido para mutaciones</span>
             <span>Expansión adaptativa: permitida</span>
             <span>Riesgo máximo derivado: medium</span>
+            <span>Categoría derivada: development</span>
             <span>Capabilities derivadas: sin máximo semántico</span>
+            <span>Reemplazo/upgrade de capability: permitido</span>
+            <span>Mutaciones irreversibles: no permitidas en esta misión</span>
+            <span>Tests de capability: requeridos</span>
             <span>Plan: sin máximo de pasos</span>
-            <span>Intentos planner/desarrollo: {ADAPTIVE_POLICY.maxPlanningAttempts}</span>
+            <span>Intentos planner: {ADAPTIVE_POLICY.maxPlanningAttempts}</span>
+            <span>Intentos desarrollo: {ADAPTIVE_POLICY.maxCapabilityDevelopmentAttempts}</span>
+            <span>Artefacto máximo: {Math.round(ADAPTIVE_POLICY.maxArtifactBytes / 1024 / 1024)} MB</span>
             <span>Workspace desarrollo: {Math.round(ADAPTIVE_POLICY.maxWorkspaceBytes / 1024 / 1024)} MB</span>
+            <span>Máximo de archivos: {ADAPTIVE_POLICY.maxFiles}</span>
+            <span>Timeout por tool: {ADAPTIVE_POLICY.toolTimeoutMs / 1000} s</span>
+            <span>Input por tool: {Math.round(ADAPTIVE_POLICY.maxToolInputBytes / 1024 / 1024)} MB</span>
+            <span>Output por tool: {Math.round(ADAPTIVE_POLICY.maxToolOutputBytes / 1024 / 1024)} MB</span>
+            <span>Argumentos por tool: {ADAPTIVE_POLICY.maxToolArgs}</span>
+            <span>Perfil ejecución: {LOCAL_DEVELOPMENT_PROFILE}</span>
           </div>
 
           {!missionId ? (
@@ -386,8 +412,8 @@ export default function OperationalMissionPanel() {
                 <strong>La misión está propuesta</strong>
                 <p>
                   Core ya resolvió la identidad local de ejecución dentro del Mission Envelope.
-                  Esta autorización cubre el objetivo, workspace y política adaptativa mostrada;
-                  no se pedirá aprobación por cada archivo o paso.
+                  Al autorizar confirmas el objetivo, workspace y toda la política explícita mostrada arriba;
+                  no se pedirá aprobación por cada archivo o paso dentro de ese scope.
                 </p>
               </div>
               <button className="operational-primary" disabled={busy} onClick={() => void authorizeAndRunMission()}>
