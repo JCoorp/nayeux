@@ -1,0 +1,29 @@
+NAYE DESKTOP CHECKPOINT
+Captured: 2026-08-24T06:39:11.4746849-06:00
+
+BRANCH
+feat/live-operational-mission-ux-v2
+
+REMOTE
+origin	https://github.com/JCoorp/nayeux.git (fetch)
+origin	https://github.com/JCoorp/nayeux.git (push)
+
+STATUS BEFORE CHECKPOINT
+ M vite.config.ts
+?? NEXT_CHAT_START_HERE.md
+
+DIFF STAT BEFORE CHECKPOINT
+ vite.config.ts | 1 +
+ 1 file changed, 1 insertion(+)
+
+RECENT COMMITS
+915625b (HEAD -> feat/live-operational-mission-ux-v2, origin/feat/live-operational-mission-ux-v2) fix: surface full mission policy before authorization
+f522db4 docs: align Desktop launch with unified operational stack
+2d2b3da fix: distinguish Vite dev launch from built Desktop start
+30b38c4 fix: make unpackaged start use built renderer
+87dcd8e fix: serialize resumed mission run without blocking controls
+56a08e9 ci: verify Electron operational bridge contract
+f64df43 test: prove Desktop bridge excludes low-level operations
+1c859d5 refactor: use tested operational bridge policy
+8891594 test: define bounded Desktop operational bridge policy
+43f0528 fix: route operational client through bounded Desktop IPC
