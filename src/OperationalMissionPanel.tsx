@@ -17,6 +17,9 @@ import type {
   OperationalMissionRunResponse,
   OperationalMissionStatus
 } from "./operationalTypes";
+import {
+  deriveOperationalMissionPresentation
+} from "./operationalMissionPresentation.js";
 
 const OPERATOR = {
   userId: "local-desktop-operator",
@@ -140,6 +143,13 @@ export default function OperationalMissionPanel() {
   const controlTerminal = mission?.control?.terminal === true;
   const orchestrator = orchestration?.runtime?.orchestrator || null;
   const orchestrationRunning = orchestration?.running === true;
+  const missionPresentation = deriveOperationalMissionPresentation({
+    authorizationActive,
+    desiredState,
+    controlTerminal,
+    orchestratorState: orchestrator?.state,
+    orchestratorTerminal: orchestrator?.terminal === true
+  });
 
   const createMission = useCallback(async () => {
     if (!objective.trim() || !workspaceRoot.trim()) return;
@@ -478,34 +488,32 @@ export default function OperationalMissionPanel() {
       <section className="operational-card operational-control-card">
         <div>
           <span className="operational-eyebrow">CONTROL HUMANO PERMANENTE</span>
-          <h2>{authorizationActive ? "Misión en curso" : "Esperando autorización"}</h2>
-          <p>
-            Puedes observar el proceso sin intervenir. Pause, Stop, Rollback y Revocación permanecen disponibles durante una ejecución activa.
-          </p>
+          <h2>{missionPresentation.heading}</h2>
+          <p>{missionPresentation.description}</p>
         </div>
         <div className="operational-controls">
           <button
-            disabled={!authorizationActive || controlTerminal || controlBusy || desiredState === "paused"}
+            disabled={!authorizationActive || missionPresentation.terminal || controlBusy || desiredState === "paused"}
             onClick={() => void controlMission("pause")}
           >
             Pausar
           </button>
           <button
-            disabled={!authorizationActive || controlTerminal || controlBusy || desiredState !== "paused" || orchestrationRunning}
+            disabled={!authorizationActive || missionPresentation.terminal || controlBusy || desiredState !== "paused" || orchestrationRunning}
             onClick={() => void controlMission("resume")}
           >
             Reanudar
           </button>
           <button
             className="is-danger"
-            disabled={!authorizationActive || controlTerminal || controlBusy}
+            disabled={!authorizationActive || missionPresentation.terminal || controlBusy}
             onClick={() => void controlMission("stop")}
           >
             Stop
           </button>
           <button
             className="is-warning"
-            disabled={!authorizationActive || controlTerminal || controlBusy}
+            disabled={!authorizationActive || missionPresentation.terminal || controlBusy}
             onClick={() => void controlMission("rollback")}
           >
             Rollback

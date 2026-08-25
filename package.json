@@ -9,6 +9,7 @@
     "dev": "concurrently -k \"npm:dev:renderer\" \"npm:dev:electron\"",
     "dev:renderer": "vite --host 127.0.0.1 --port 5173 --strictPort",
     "dev:electron": "wait-on tcp:127.0.0.1:5173 && electron . --naye-dev",
+    "test:operational-mission-presentation": "node src/operationalMissionPresentation.test.mjs",
     "build": "tsc && vite build",
     "start": "electron .",
     "preview": "vite preview --host 127.0.0.1 --port 5173 --strictPort"
