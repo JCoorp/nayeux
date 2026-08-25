@@ -10,6 +10,7 @@ import type {
 } from "./operationalTypes";
 
 const NAYE_API_BASE_URL = "http://127.0.0.1:17890";
+const inFlightGetRequests = new Map<string, Promise<unknown>>();
 
 type OperationalRequestOptions = {
   method?: "GET" | "POST";
@@ -38,7 +39,7 @@ function errorDetail(data: unknown, status: number): string {
   );
 }
 
-async function requestJson<T>(
+async function performRequestJson<T>(
   endpoint: string,
   options: OperationalRequestOptions = {}
 ): Promise<T> {
@@ -88,6 +89,32 @@ async function requestJson<T>(
   }
 
   return data as T;
+}
+
+function requestJson<T>(
+  endpoint: string,
+  options: OperationalRequestOptions = {}
+): Promise<T> {
+  const method = options.method || "GET";
+
+  if (method !== "GET") {
+    return performRequestJson<T>(endpoint, options);
+  }
+
+  const existing = inFlightGetRequests.get(endpoint) as Promise<T> | undefined;
+  if (existing) return existing;
+
+  const request = performRequestJson<T>(endpoint, { ...options, method: "GET" });
+  inFlightGetRequests.set(endpoint, request as Promise<unknown>);
+
+  const clear = () => {
+    if (inFlightGetRequests.get(endpoint) === request) {
+      inFlightGetRequests.delete(endpoint);
+    }
+  };
+
+  request.then(clear, clear);
+  return request;
 }
 
 function postJson<T>(endpoint: string, body: unknown): Promise<T> {
