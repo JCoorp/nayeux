@@ -46,9 +46,14 @@ jobs:
           node --check electron/preload.cjs
           node --check electron/operationalBridgePolicy.cjs
           node --check electron/operationalBridgePolicy.test.cjs
+          node --check electron/rendererLifecyclePolicy.cjs
+          node --check electron/rendererLifecyclePolicy.test.cjs
 
       - name: Prove bounded operational bridge policy
         run: node electron/operationalBridgePolicy.test.cjs
+
+      - name: Prove bounded renderer recovery policy
+        run: npm run test:renderer-lifecycle
 
       - name: Type-check and build renderer
         run: npm run build

@@ -3,9 +3,181 @@ const path = require("path");
 const {
   normalizeOperationalRequest
 } = require("./operationalBridgePolicy.cjs");
+const {
+  DEV_RENDERER_URL,
+  MAX_RENDERER_RECOVERY_ATTEMPTS,
+  shouldRecoverRenderer
+} = require("./rendererLifecyclePolicy.cjs");
 
 const NAYE_API_BASE_URL = "http://127.0.0.1:17890";
 const useDevServer = process.argv.includes("--naye-dev");
+
+function rendererLog(type, details = {}) {
+  const record = {
+    schema: "naye-desktop-renderer-event-v1",
+    timestamp: new Date().toISOString(),
+    type,
+    ...details
+  };
+  process.stdout.write(`[naye-renderer] ${JSON.stringify(record)}\n`);
+}
+
+function errorMessage(error) {
+  return error instanceof Error ? error.message : String(error || "unknown_renderer_error");
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+async function showRendererFailurePage(win, error) {
+  if (win.isDestroyed()) return;
+  const message = escapeHtml(errorMessage(error));
+  const html = `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Naye Desktop UX — renderer no disponible</title>
+<style>
+html,body{height:100%;margin:0;background:#090b12;color:#f5f7fb;font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+body{display:grid;place-items:center}.card{max-width:760px;margin:32px;padding:28px;border:1px solid #303749;border-radius:16px;background:#111622}
+h1{margin-top:0;font-size:24px}p{line-height:1.55;color:#c7cedd}code{display:block;white-space:pre-wrap;word-break:break-word;padding:14px;border-radius:10px;background:#080b11;color:#ffcf8b}
+</style>
+</head>
+<body><main class="card"><h1>Naye Desktop UX no pudo cargar el renderer</h1><p>Core no se ha reiniciado. El proceso principal de Desktop conservó el error para diagnóstico y evitó dejar una ventana negra silenciosa.</p><code>${message}</code></main></body>
+</html>`;
+
+  try {
+    await win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+  } catch (fallbackError) {
+    rendererLog("renderer_failure_page_failed", {
+      error: errorMessage(fallbackError)
+    });
+  }
+}
+
+async function navigateRenderer(win, trigger) {
+  if (win.isDestroyed()) return;
+
+  rendererLog("renderer_navigation_started", {
+    trigger,
+    mode: useDevServer ? "development" : "production",
+    target: useDevServer ? DEV_RENDERER_URL : "dist/index.html"
+  });
+
+  if (useDevServer) {
+    await win.loadURL(DEV_RENDERER_URL, {
+      extraHeaders: "Accept: text/html\n"
+    });
+  } else {
+    await win.loadFile(path.join(__dirname, "..", "dist", "index.html"));
+  }
+
+  rendererLog("renderer_navigation_completed", {
+    trigger,
+    url: win.webContents.getURL()
+  });
+}
+
+function installRendererLifecycle(win) {
+  let recoveryAttempts = 0;
+  let recoveryInFlight = false;
+
+  win.webContents.on("did-navigate", (_event, url, httpResponseCode, httpStatusText) => {
+    rendererLog("renderer_did_navigate", {
+      url,
+      httpResponseCode,
+      httpStatusText
+    });
+  });
+
+  win.webContents.on("did-finish-load", () => {
+    rendererLog("renderer_did_finish_load", {
+      url: win.webContents.getURL(),
+      recoveryAttempts
+    });
+  });
+
+  win.webContents.on(
+    "did-fail-load",
+    (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+      if (!isMainFrame) return;
+      rendererLog("renderer_did_fail_load", {
+        errorCode,
+        errorDescription,
+        validatedURL,
+        recoveryAttempts
+      });
+    }
+  );
+
+  win.webContents.on("preload-error", (_event, preloadPath, error) => {
+    rendererLog("renderer_preload_error", {
+      preloadPath,
+      error: errorMessage(error)
+    });
+  });
+
+  win.webContents.on("unresponsive", () => {
+    rendererLog("renderer_unresponsive", {
+      url: win.webContents.getURL(),
+      recoveryAttempts
+    });
+  });
+
+  win.webContents.on("responsive", () => {
+    rendererLog("renderer_responsive", {
+      url: win.webContents.getURL(),
+      recoveryAttempts
+    });
+  });
+
+  win.webContents.on("render-process-gone", (_event, details) => {
+    rendererLog("renderer_process_gone", {
+      reason: details.reason,
+      exitCode: details.exitCode,
+      recoveryAttempts
+    });
+
+    if (recoveryInFlight) return;
+    if (!shouldRecoverRenderer({
+      reason: details.reason,
+      attempts: recoveryAttempts,
+      maxAttempts: MAX_RENDERER_RECOVERY_ATTEMPTS
+    })) {
+      rendererLog("renderer_recovery_not_attempted", {
+        reason: details.reason,
+        recoveryAttempts,
+        maxAttempts: MAX_RENDERER_RECOVERY_ATTEMPTS
+      });
+      return;
+    }
+
+    recoveryAttempts += 1;
+    recoveryInFlight = true;
+
+    setTimeout(() => {
+      void navigateRenderer(win, `render-process-gone:${details.reason}`)
+        .catch(async (error) => {
+          rendererLog("renderer_recovery_failed", {
+            reason: details.reason,
+            recoveryAttempts,
+            error: errorMessage(error)
+          });
+          await showRendererFailurePage(win, error);
+        })
+        .finally(() => {
+          recoveryInFlight = false;
+        });
+    }, 500);
+  });
+}
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -25,13 +197,17 @@ function createWindow() {
   });
 
   win.removeMenu();
+  installRendererLifecycle(win);
   win.once("ready-to-show", () => win.show());
 
-  if (useDevServer) {
-    win.loadURL("http://127.0.0.1:5173");
-  } else {
-    win.loadFile(path.join(__dirname, "..", "dist", "index.html"));
-  }
+  void navigateRenderer(win, "initial")
+    .catch(async (error) => {
+      rendererLog("renderer_initial_navigation_failed", {
+        error: errorMessage(error)
+      });
+      await showRendererFailurePage(win, error);
+      if (!win.isDestroyed()) win.show();
+    });
 
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith("http://127.0.0.1")) {
@@ -166,6 +342,10 @@ app.whenReady().then(() => {
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+});
+
+app.on("child-process-gone", (_event, details) => {
+  rendererLog("electron_child_process_gone", details);
 });
 
 app.on("window-all-closed", () => {
