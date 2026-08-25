@@ -183,3 +183,70 @@ Do not confuse Desktop repo with naye-core.
 Do not restart the live physical mission merely because the UI is slow.
 
 Read the Core NEXT_CHAT_START_HERE.md before continuing development.
+
+---
+
+# TERMINAL MISSION STATE PRESENTATION
+
+Incident date: 2026-08-24
+
+Observed Core mission:
+
+mission-1-80537ac0-7b9e-42c0-9718-0d1e2902e1b7
+
+Observed runtime:
+
+live-2f85cec1da617286bc338ee0aec9404a00708c2443ea563e79079ece548f6f1d
+
+The mission yielded at cursor 0 because the planned file.create_text action
+did not contain targetPath. The operator requested Stop. Core settled the
+mission as stopped_by_operator / terminal true, but the Desktop control card
+continued to say:
+
+Misión en curso
+
+Root cause:
+
+- OperationalMissionPanel derived its heading only from authorizationActive
+- a stopped mission may retain a registered active authorization even though
+  its orchestrator is terminal and no execution is active
+- the text therefore confused authorization state with execution state
+
+Checkpoint:
+
+61ef3dc73c87c81afadf78d438386fdff6d23199
+fix: show terminal mission state truthfully
+
+Changes:
+
+- terminal stopped_by_operator/stopped now displays Misión detenida
+- terminal completed now displays Misión completada
+- other terminal states display Misión finalizada
+- the terminal explanation states that no execution is active
+- active missions still display Misión en curso
+- control disabling uses the combined Core control/orchestrator terminal truth
+- revocation remains separately available while authorization is still active
+- the pure presentation projection has a permanent Node self-test
+
+Automated evidence:
+
+GitHub Actions run #19
+run id: 32799281291
+
+- ubuntu-latest: success
+- windows-latest: success
+- TypeScript type-check and renderer build passed on both platforms
+
+The automated build is regression evidence only. The updated Desktop rendering
+has not yet been physically accepted on the operator's Windows machine.
+
+Current branch remains:
+
+feat/live-operational-mission-ux-v2
+
+Do not merge main.
+
+Do not revive the stopped mission above. After pulling this branch, use a new
+mission identity and a new empty workspace for the next Core physical acceptance.
+
+End terminal mission state presentation update.
