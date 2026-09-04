@@ -38,6 +38,18 @@ const completed = deriveOperationalMissionPresentation({
 assert.equal(completed.heading, "Misión completada");
 assert.equal(completed.terminal, true);
 
+const failed = deriveOperationalMissionPresentation({
+  authorizationActive: true,
+  desiredState: "running",
+  controlTerminal: true,
+  orchestratorState: "planning_failed",
+  orchestratorTerminal: true
+});
+
+assert.equal(failed.heading, "Misión fallida");
+assert.equal(failed.terminal, true);
+assert.match(failed.description, /no reiniciará el presupuesto agotado/);
+
 const waiting = deriveOperationalMissionPresentation({
   authorizationActive: false,
   desiredState: "not_started",
@@ -52,5 +64,5 @@ assert.equal(waiting.terminal, false);
 console.log(JSON.stringify({
   schema: "naye-operational-mission-presentation-selftest-v1",
   passed: true,
-  assertions: 9
+  assertions: 12
 }, null, 2));

@@ -135,6 +135,7 @@ export type DesktopContext = {
   mode: "development" | "production";
   apiBaseUrl: string;
   renderer: string;
+  defaultOperationalWorkspace: string | null;
 };
 
 export type DesktopOperationalRequest = {

@@ -8,6 +8,9 @@ const {
   MAX_RENDERER_RECOVERY_ATTEMPTS,
   shouldRecoverRenderer
 } = require("./rendererLifecyclePolicy.cjs");
+const {
+  resolveDefaultOperationalWorkspace
+} = require("./operationalWorkspacePolicy.cjs");
 
 const NAYE_API_BASE_URL = "http://127.0.0.1:17890";
 const useDevServer = process.argv.includes("--naye-dev");
@@ -333,7 +336,12 @@ ipcMain.handle("naye:get-desktop-context", () => ({
   appVersion: app.getVersion(),
   mode: useDevServer ? "development" : "production",
   apiBaseUrl: NAYE_API_BASE_URL,
-  renderer: useDevServer ? "vite-dev-server" : "local-desktop-bundle"
+  renderer: useDevServer ? "vite-dev-server" : "local-desktop-bundle",
+  defaultOperationalWorkspace:
+    resolveDefaultOperationalWorkspace({
+      env: process.env,
+      appPath: app.getAppPath()
+    })
 }));
 
 app.whenReady().then(() => {

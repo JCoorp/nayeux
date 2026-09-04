@@ -8,6 +8,11 @@ const COMPLETED_STATES = new Set([
   "mission_completed"
 ]);
 
+const FAILED_STATES = new Set([
+  "failed",
+  "planning_failed"
+]);
+
 export function deriveOperationalMissionPresentation({
   authorizationActive,
   desiredState,
@@ -43,6 +48,16 @@ export function deriveOperationalMissionPresentation({
       heading: "Misión completada",
       description:
         "La orquestación llegó a un estado terminal completado. Consulta la actividad y la evidencia antes de aceptar el resultado.",
+      terminal: true,
+      state
+    });
+  }
+
+  if (terminal && FAILED_STATES.has(state)) {
+    return Object.freeze({
+      heading: "Misión fallida",
+      description:
+        "La misión terminó sin completar el objetivo. Consulta el motivo y la evidencia; Continuar no reiniciará el presupuesto agotado.",
       terminal: true,
       state
     });

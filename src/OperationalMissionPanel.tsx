@@ -20,6 +20,9 @@ import type {
 import {
   deriveOperationalMissionPresentation
 } from "./operationalMissionPresentation.js";
+import {
+  getDesktopContext
+} from "./nayeDesktopClient";
 
 const OPERATOR = {
   userId: "local-desktop-operator",
@@ -79,14 +82,46 @@ export default function OperationalMissionPanel() {
   const [objective, setObjective] = useState(
     "Crea un resultado verificable dentro del workspace autorizado. Si falta una capacidad para cumplir el objetivo, desarróllala, pruébala, actívala y continúa la misma misión."
   );
-  const [workspaceRoot, setWorkspaceRoot] = useState(
-    "F:\\NayeVault\\missions\\operational-workspace"
-  );
+  const [workspaceRoot, setWorkspaceRoot] = useState("");
   const [missionId, setMissionId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [controlBusy, setControlBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void getDesktopContext()
+      .then((context) => {
+        if (
+          cancelled ||
+          !context.defaultOperationalWorkspace
+        ) {
+          return;
+        }
+
+        setWorkspaceRoot(
+          (current) =>
+            current ||
+            context.defaultOperationalWorkspace ||
+            ""
+        );
+      })
+      .catch((nextError) => {
+        if (!cancelled) {
+          setError(
+            nextError instanceof Error
+              ? nextError.message
+              : String(nextError)
+          );
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const refresh = useCallback(async () => {
     const engineResult = await getOperationalActionEngineStatus();
@@ -372,6 +407,7 @@ export default function OperationalMissionPanel() {
             <input
               value={workspaceRoot}
               onChange={(event) => setWorkspaceRoot(event.target.value)}
+              placeholder="Selecciona un workspace absoluto dentro de NayeVault"
               disabled={Boolean(missionId) || busy}
             />
           </label>
@@ -411,7 +447,7 @@ export default function OperationalMissionPanel() {
           </div>
 
           {!missionId ? (
-            <button className="operational-primary" disabled={busy} onClick={() => void createMission()}>
+            <button className="operational-primary" disabled={busy || !workspaceRoot.trim()} onClick={() => void createMission()}>
               {busy ? "Creando misión..." : "Crear misión"}
             </button>
           ) : null}

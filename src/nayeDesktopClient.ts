@@ -57,7 +57,8 @@ export async function getDesktopContext(): Promise<DesktopContext> {
     appVersion: "0.3.0",
     mode: "development",
     apiBaseUrl: NAYE_API_BASE_URL,
-    renderer: "browser-fallback"
+    renderer: "browser-fallback",
+    defaultOperationalWorkspace: null
   };
 }
 
