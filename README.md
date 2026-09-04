@@ -2,113 +2,108 @@
 
 Aplicación local de escritorio para Naye, construida con Electron + Vite + React + TypeScript.
 
-Esta versión reemplaza la consola web simple por una interfaz tipo asistente, parecida a GPT/Gemini, pero mantiene la regla de seguridad principal:
+La frontera de producto es:
 
 ```text
 Naye Desktop UX
   ↓
-Naye Core API
+Naye Unified Core API · 127.0.0.1:17890
   ↓
-Naye Core / Bridge
+Live Mission Service / Action Engine
   ↓
-OpenClaw Gateway
+Legacy runtime + modelo local
 ```
 
-La UX no se conecta directo a OpenClaw ni a `ws://127.0.0.1:18789`.
+La UX no obtiene autoridad operacional por sí misma. La autorización pertenece al Mission Envelope del Core.
 
-## Qué incluye
+## Modos
 
-- Aplicación local de escritorio con Electron.
-- Interfaz principal tipo chat moderno.
-- Composer visual preparado, pero bloqueado hasta que exista `POST /api/chat`.
-- Panel de sistema.
-- Panel de OpenClaw.
-- Panel de nodo local.
-- Panel de sesiones.
-- Lectura segura mediante IPC de Electron.
-- Sin `localStorage`.
-- Sin tokens visibles.
-- Sin botones destructivos.
-- Sin conexión directa al WebSocket de OpenClaw.
+- **Naye**: experiencia de asistente y estado local existente.
+- **Misiones**: flujo operacional de alto nivel para proponer, autorizar, ejecutar y observar una misión.
 
-## Endpoints usados
-
-La app consulta únicamente Naye Core API:
+La vista de Misiones usa únicamente:
 
 ```text
-GET http://127.0.0.1:17890/api/status
-GET http://127.0.0.1:17890/api/openclaw/status
-GET http://127.0.0.1:17890/api/openclaw/config-summary
-GET http://127.0.0.1:17890/api/node/profile
-GET http://127.0.0.1:17890/api/sessions/active
+GET  /api/operational/action-engine/status
+POST /api/operational/missions
+GET  /api/operational/missions/:id
+GET  /api/operational/missions/:id/activity
+GET  /api/operational/missions/:id/orchestration
+POST /api/operational/missions/:id/authorize
+POST /api/operational/missions/:id/run
+POST /api/operational/missions/:id/control
+POST /api/operational/missions/:id/revoke
 ```
 
-## Antes de abrir la app
+El bridge IPC de Electron rechaza rutas operacionales inferiores como `actions/admit`, `actions/dispatch`, grants y runtime interno.
 
-Levanta OpenClaw y Naye Core API.
+## Antes de abrir Desktop
 
-Terminal 1:
+Usa el Core de la rama compatible con el Live Mission Service y asegúrate de que el modelo local configurado por Naye esté disponible.
+
+Desde el repositorio `naye-core`:
 
 ```powershell
-cd F:\NayeVault\naye-core
-openclaw gateway start
-Start-Sleep -Seconds 8
-npm run openclaw-bridge-status
+npm ci
+npm run naye-api-unified
 ```
 
-Terminal 2:
+`naye-api-unified` expone la API pública en `127.0.0.1:17890` y levanta automáticamente el Core legacy upstream en el puerto siguiente disponible/configurado para esta ruta (`17891` por defecto).
+
+En Windows, el gateway usa `F:/NayeVault` como vault por defecto. Si ese volumen no existe, define uno explícitamente antes de iniciar Core, por ejemplo:
 
 ```powershell
-cd F:\NayeVault\naye-core
-npm run naye-api
+$env:NAYE_VAULT_ROOT = "$env:USERPROFILE\NayeVault"
+npm run naye-api-unified
 ```
 
-Si aparece `EADDRINUSE`, significa que la API ya está corriendo en `127.0.0.1:17890`.
+## Desarrollo Desktop
 
-## Instalar y ejecutar Naye Desktop UX
+Desde el repositorio separado `nayeux`:
 
 ```powershell
-cd F:\NayeVault\naye-core\naye-desktop-ux
-npm install
+npm ci
 npm run dev
 ```
 
-Esto abre una ventana local de escritorio con Electron.
+`npm run dev` inicia Vite en `127.0.0.1:5173` y Electron con el flag interno `--naye-dev`.
 
-## Si Windows bloquea dependencias
-
-Ejecuta:
+## Probar el bundle construido
 
 ```powershell
-cd F:\NayeVault\naye-core\naye-desktop-ux
-Get-ChildItem -Path . -Recurse | Unblock-File
-Remove-Item -Recurse -Force node_modules -ErrorAction SilentlyContinue
-Remove-Item -Force package-lock.json -ErrorAction SilentlyContinue
-npm cache verify
-npm install
-npm run dev
+npm ci
+npm run build
+npm start
 ```
 
-## Notas de diseño
+`npm start` carga `dist/index.html` directamente. No necesita un Vite dev server.
 
-Aunque Electron usa internamente un renderer basado en tecnologías web, el usuario no abre un HTML suelto: abre una aplicación local de escritorio. En desarrollo se usa Vite en `127.0.0.1:5173` solamente para servir el renderer de la app.
+Las llamadas operacionales de Electron pasan por el preload/IPC bounded y desde el proceso principal llegan a la API local del Core. El fallback `fetch` directo existe únicamente cuando la UI se ejecuta como navegador de desarrollo sin el bridge Electron.
 
-## Fase futura
+## Control humano
 
-Cuando Naye Core tenga estos endpoints, se puede activar el chat real y acciones controladas:
+Durante una misión autorizada, Desktop mantiene visibles y utilizables los controles de:
 
-```text
-POST /api/chat
-POST /api/session/authorize
-POST /api/session/close
-GET /api/openclaw/capabilities
-GET /api/openclaw/plugins
-POST /api/openclaw/tool-request
-```
+- Pause
+- Resume
+- Stop
+- Rollback
+- Revocar autorización
 
+El Activity Stream y el estado de orchestration se consultan periódicamente para que el usuario pueda observar plan, capability gaps, desarrollo, activación, ejecución, verificación y fallos.
 
-## v0.3.0
+## Truth boundary actual
 
-Esta versión activa el composer de chat. El botón Enviar llama a `POST /api/chat` en Naye Core API.
+La UI muestra explícitamente estados que todavía no deben maquillarse como garantías:
 
-Importante: esta UX no se conecta directamente a OpenClaw. La respuesta conversacional depende exclusivamente del endpoint local de Naye Core. Para esta fase, el endpoint puede responder en modo `local-safe` mientras se implementa la conexión profunda con OpenClaw.
+- `automaticExecution`
+- restart recovery
+- power-loss durability
+- model authority
+- source-author authority
+
+Una build verde de Desktop no sustituye la prueba física Desktop → Core → modelo local → misión adaptativa. Esa prueba es un gate separado.
+
+## Integridad de aceptación
+
+La rama de Misiones usa un objetivo inicial neutral. No incorpora soluciones específicas ni prepara de antemano una futura misión de aceptación del usuario.

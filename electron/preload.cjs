@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld("nayeDesktop", {
   getNodeProfile: () => ipcRenderer.invoke("naye:get-node-profile"),
   getActiveSessions: () => ipcRenderer.invoke("naye:get-active-sessions"),
   sendChat: (payload) => ipcRenderer.invoke("naye:send-chat", payload),
+  operationalRequest: (payload) => ipcRenderer.invoke("naye:operational-request", payload),
   getScreenLiveStatus: () => ipcRenderer.invoke("naye:get-screen-live-status"),
   getScreenLiveLatest: () => ipcRenderer.invoke("naye:get-screen-live-latest"),
   startScreenLive: (payload) => ipcRenderer.invoke("naye:start-screen-live", payload),

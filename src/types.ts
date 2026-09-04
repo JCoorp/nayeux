@@ -43,7 +43,6 @@ export type OpenClawConfigSummary = {
 export type NodeProfile = Record<string, unknown>;
 export type ActiveSessions = unknown;
 
-
 export type ChatRequest = {
   message: string;
   sessionId?: string | null;
@@ -62,7 +61,6 @@ export type ChatResponse = {
     timedOut?: boolean;
   };
 };
-
 
 export type ScreenLiveFrameMeta = {
   timestamp?: string;
@@ -137,6 +135,19 @@ export type DesktopContext = {
   mode: "development" | "production";
   apiBaseUrl: string;
   renderer: string;
+  defaultOperationalWorkspace: string | null;
+};
+
+export type DesktopOperationalRequest = {
+  endpoint: string;
+  method: "GET" | "POST";
+  body?: unknown;
+};
+
+export type DesktopOperationalResponse = {
+  ok: boolean;
+  status: number;
+  data: unknown;
 };
 
 export type SystemSnapshot = {
@@ -162,6 +173,7 @@ declare global {
       getNodeProfile: () => Promise<NodeProfile>;
       getActiveSessions: () => Promise<ActiveSessions>;
       sendChat: (payload: ChatRequest) => Promise<ChatResponse>;
+      operationalRequest: (payload: DesktopOperationalRequest) => Promise<DesktopOperationalResponse>;
       getScreenLiveStatus: () => Promise<ScreenLiveStatusResponse>;
       getScreenLiveLatest: () => Promise<ScreenLiveLatestResponse>;
       startScreenLive: (payload: ScreenLiveStartRequest) => Promise<ScreenLiveActionResponse>;
